@@ -20,31 +20,28 @@ import java.util.List;
  * node starts processing client requests.
  * 
  */
-public class AdminNode 
-{
+public class AdminNode {
 
 	private final int INITIAL_CAPACITY;
+	
+	/** Current state of the admin node */
 	private AdminNodeState state;
-	
-	private JoinRequestManager joinRequests;
 
-	
+	/** Used during INITIAL_SIGNUP_PHASE to keep track of all nodes who requested to JOIN */
+	private JoinRequestManager joinRequests;
 
 	public AdminNodeState getState() {
 		return state;
 	}
-	
 
 	public AdminNode(int initialCapacity) {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
 
 		INITIAL_CAPACITY = initialCapacity;
 		assert initialCapacity > 0;
-		
+
 		joinRequests = new JoinRequestManager(initialCapacity);
 	}
-	
+
 	// TODO: run multithreaded server
 }
-
-
