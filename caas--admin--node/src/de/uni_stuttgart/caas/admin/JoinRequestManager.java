@@ -44,22 +44,28 @@ public class JoinRequestManager {
 	 * 
 	 * This method is threadsafe.
 	 * 
-	 * @return true if the node was added, false if the initial grid capacity is
-	 *         exceeded (note that a check against IsComplete() does not prevent
-	 *         this as multiple calls to TryAdd may race against each other.)
+	 * @param rw
+	 *            non-null join request instance to be added to the list.
+	 * @throw IllegalStateException if the initial grid capacity is exceeded
+	 *        (note that a check against IsComplete() does not prevent this as
+	 *        multiple calls to TryAdd may race against each other.)
+	 * @throw IllegalArgumentException if the join request is for a node that is
+	 *        already on the list.
 	 */
-	public boolean TryAdd(JoinRequest rq) {
+	public void TryAdd(JoinRequest rq) {
 		assert rq != null;
 
 		synchronized (joinRequests) {
 			assert joinRequests.size() <= INITIAL_CAPACITY;
 			if (joinRequests.size() == INITIAL_CAPACITY) {
-				return false;
+				throw new IllegalStateException();
 			}
+
+			// TODO: check whether entry already exists, if so, throw
+			// IllegalArgumentException
+
 			joinRequests.add(rq);
 		}
-
-		return true;
 	}
 
 	public static class JoinRequest {

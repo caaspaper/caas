@@ -1,9 +1,5 @@
 package de.uni_stuttgart.caas.admin;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Run multithreaded server and obey the following protocol:
  * 
@@ -23,12 +19,16 @@ import java.util.List;
 public class AdminNode {
 
 	private final int INITIAL_CAPACITY;
-	
+
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
-	/** Used during INITIAL_SIGNUP_PHASE to keep track of all nodes who requested to JOIN */
+	/**
+	 * Used during INITIAL_SIGNUP_PHASE to keep track of all nodes who requested
+	 * to JOIN the grid.
+	 */
 	private JoinRequestManager joinRequests;
+
 
 	public AdminNodeState getState() {
 		return state;

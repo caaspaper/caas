@@ -23,9 +23,13 @@ public class ConfirmationMessage implements IMessage {
 		STATUS_CODE = statusCode;
 		MESSAGE = message;
 	}
+	
 
 	@Override
 	public MessageType GetMessage() {
 		return MessageType.CONFIRM;
 	}
 }
+
+
+
