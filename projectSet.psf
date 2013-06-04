@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<psf version="2.0">
+<provider id="org.eclipse.team.cvs.core.cvsnature">
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--federation--cache--common,nexus--federation--cache--common"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--federation--cache--local,nexus--federation--cache--local"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--federation--cacheOverlay,nexus--federation--cacheOverlay,branch_staff_luebbecs"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--augmentedWorld,nexus--library--augmentedWorld,branch_staff_cipriani"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--augmentedWorld2v2,nexus--library--augmentedWorld2v2,branch_staff_cipriani"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--communication,nexus--library--communication"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--communication--jaxrpc,nexus--library--communication--jaxrpc"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--configapi,nexus--library--configapi"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--geoClasses,nexus--library--geoClasses,branch_staff_luebbecs"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--seife,nexus--library--seife"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--soap,nexus--library--soap"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--types,nexus--library--types"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--utilities,nexus--library--utilities"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--library--xml,nexus--library--xml"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--misc--shape2AWML,nexus--misc--shape2AWML,branch_staff_luebbecs"/>
+<project reference="1.0,:extssh:nimbus.informatik.uni-stuttgart.de:/home/nexus/cvs,nexus--thirdParty--JARs,nexus--thirdParty--JARs,branch_staff_cipriani"/>
+</provider>
+</psf>
