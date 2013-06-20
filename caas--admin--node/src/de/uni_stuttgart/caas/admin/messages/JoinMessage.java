@@ -1,5 +1,16 @@
 package de.uni_stuttgart.caas.admin.messages;
 
-public class JoinMessage {
+/**
+ * 
+ */
+public class JoinMessage implements IMessage {
+
+	public JoinMessage() {
+	}
+
+	@Override
+	public MessageType GetMessage() {
+		return MessageType.JOIN;
+	}
 
 }
