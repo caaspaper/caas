@@ -7,7 +7,6 @@ public class JoinMessage implements IMessage {
 	 */
 	@Override
 	public MessageType GetMessage() {
-		
 		return MessageType.JOIN;
 	}
 
