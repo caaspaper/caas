@@ -62,4 +62,19 @@ public class NodeInfo {
 		return locationOfNode;
 	}
 
+	@Override
+	public int hashCode() {
+		return NODE_ADDRESS.hashCode();
+
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o != null && o instanceof NodeInfo) {
+			return this.NODE_ADDRESS == ((NodeInfo) o).NODE_ADDRESS;
+		}
+		return false;
+
+	}
+
 }
