@@ -60,9 +60,10 @@ public class JoinRequestManager {
 			if (joinRequests.size() == INITIAL_CAPACITY) {
 				throw new IllegalStateException();
 			}
-
-			// TODO: check whether entry already exists, if so, throw
-			// IllegalArgumentException
+		
+			if (joinRequests.contains(rq)) {
+				throw new IllegalArgumentException("rq");
+			}
 
 			joinRequests.add(rq);
 		}
