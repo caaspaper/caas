@@ -1,7 +1,7 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.net.InetSocketAddress;
-import delaunay.Vertex;
+import delaunay.Point;
 
 /**
  * Class representing information about a node, that is stored by neighboring
@@ -17,7 +17,7 @@ public class NodeInfo {
 	/**
 	 * Location of node
 	 */
-	private Vertex locationOfNode;
+	private Point locationOfNode;
 
 	/**
 	 * Construct a new NodeInfo given the address of the node
@@ -38,7 +38,7 @@ public class NodeInfo {
 	 * @param locationOfNode
 	 *            Location of the node in the network
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, Vertex locationOfNode) {
+	public NodeInfo(InetSocketAddress nodeAdress, Point locationOfNode) {
 		this(nodeAdress);
 		updateLocation(locationOfNode);
 	}
@@ -49,7 +49,7 @@ public class NodeInfo {
 	 * @param locationOfNode
 	 *            the new location of the node
 	 */
-	public void updateLocation(Vertex locationOfNode) {
+	public void updateLocation(Point locationOfNode) {
 		this.locationOfNode = locationOfNode;
 	}
 
@@ -58,7 +58,7 @@ public class NodeInfo {
 	 * 
 	 * @return The location of the node
 	 */
-	public Vertex getLocationOfNode() {
+	public Point getLocationOfNode() {
 		return locationOfNode;
 	}
 

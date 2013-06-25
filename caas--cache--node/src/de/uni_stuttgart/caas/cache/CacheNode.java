@@ -5,7 +5,7 @@ import de.uni_stuttgart.caas.admin.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.admin.messages.IMessage;
 import de.uni_stuttgart.caas.admin.messages.IMessage.MessageType;
 import de.uni_stuttgart.caas.admin.messages.JoinMessage;
-import delaunay.Vertex;
+import delaunay.Point;
 
 /**
  * Class representing the cache node
@@ -19,7 +19,7 @@ public class CacheNode {
 	/**
 	 * position of this node
 	 */
-	private Vertex position;
+	private Point position;
 
 	/**
 	 * reference rest of data TODO
