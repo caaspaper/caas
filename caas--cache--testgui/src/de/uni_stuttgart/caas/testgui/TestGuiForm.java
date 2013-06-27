@@ -23,12 +23,15 @@ public class TestGuiForm extends JFrame {
 	private final int WIDTH = 1000;
 	private final int HEIGHT = 700;
 
-	private JTextArea textArea;
-	private ImprovedFormattedTextField numNodesField;
-	private ImprovedFormattedTextField ipAdminField;
+	private final JTextArea textArea;
+	private final ImprovedFormattedTextField numNodesField;
+	private final ImprovedFormattedTextField ipAdminField;
 
-	private ImprovedFormattedTextField adminPortField;
-	private ImprovedFormattedTextField adminCapacityField;
+	private final ImprovedFormattedTextField adminPortField;
+	private final ImprovedFormattedTextField adminCapacityField;
+	
+	private final JCheckBox adminDebuggerCheckBox;
+	
 
 	public TestGuiForm() {
 		setTitle("CaaS Admin GUI");
@@ -85,7 +88,12 @@ public class TestGuiForm extends JFrame {
 		adminCapacityField.setColumns(20);
 		adminCapacityField.setBounds(240, 160, 200, 30);
 		getContentPane().add(adminCapacityField);
-
+		
+		adminDebuggerCheckBox = new JCheckBox("Attach as debugger");
+		adminDebuggerCheckBox.setBounds(490, 160, 200, 30);
+		adminDebuggerCheckBox.setSelected(true);
+		getContentPane().add(adminDebuggerCheckBox);
+		
 		// node configuration
 
 		btn = new JButton("Launch Nodes Locally");
