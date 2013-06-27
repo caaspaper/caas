@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.text.NumberFormat;
 
 import javax.swing.*;
 
@@ -60,6 +61,14 @@ public class TestGuiForm extends JFrame {
 		});
 		btn.setBounds(WIDTH-250, 300, 200, 50);
 		getContentPane().add(btn);
+		
+		NumberFormat intFormat = NumberFormat.getIntegerInstance();
+        ImprovedFormattedTextField numNodesField = new ImprovedFormattedTextField( intFormat, 100 );
+        numNodesField.setColumns( 20 );
+        numNodesField.setBounds(100, 300, 200, 50);
+        
+        getContentPane().add(numNodesField);
+        
 	}
 
 	// this taken from
