@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.text.NumberFormat;
 
 import javax.swing.*;
 
@@ -37,7 +38,7 @@ public class TestGuiForm extends JFrame {
 		getContentPane().add(scrollPane);
 		
 		//
-		JButton btn = new JButton("Launch Admin");
+		JButton btn = new JButton("Launch Admin Node");
 		btn.addActionListener(new ActionListener() {
 			
 			@Override
@@ -50,16 +51,39 @@ public class TestGuiForm extends JFrame {
 	
 		
 		//
-		btn = new JButton("Launch Nodes");
+		btn = new JButton("Launch Nodes Locally");
 		btn.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("Launching <num> Nodes");
+				System.out.println("Launching <num> local Nodes");
 			}
 		});
 		btn.setBounds(WIDTH-250, 300, 200, 50);
 		getContentPane().add(btn);
+		
+		JLabel label = new JLabel("Number of nodes to run");
+		label.setBounds(10, 300, 200, 30);
+		getContentPane().add(label);
+		
+		NumberFormat intFormat = NumberFormat.getIntegerInstance();
+        ImprovedFormattedTextField numNodesField = new ImprovedFormattedTextField( 
+        		intFormat, 64 );
+        numNodesField.setColumns( 20 );
+        numNodesField.setBounds(220, 300, 200, 30);
+        getContentPane().add(numNodesField);
+        
+        label = new JLabel("IP:Port of Admin Node");
+		label.setBounds(10, 360, 200, 30);
+		getContentPane().add(label);
+		
+		NumberFormat ipFormat = NumberFormat.getIntegerInstance();
+        ImprovedFormattedTextField ipAdminField = new ImprovedFormattedTextField( 
+        		intFormat, 64 );
+        ipAdminField.setColumns( 20 );
+        ipAdminField.setBounds(220, 360, 200, 30);
+        getContentPane().add(ipAdminField );
+        
 	}
 
 	// this taken from
