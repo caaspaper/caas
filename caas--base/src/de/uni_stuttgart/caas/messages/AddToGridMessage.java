@@ -1,6 +1,8 @@
 package de.uni_stuttgart.caas.messages;
 
 import java.util.Collection;
+
+import de.uni_stuttgart.caas.base.NodeInfo;
 import delaunay.Segment;
 
 /**
@@ -8,7 +10,7 @@ import delaunay.Segment;
  */
 public class AddToGridMessage implements IMessage{
 
-	private Collection<Segment> neighoringNodes;
+	private Collection<NodeInfo> neighoringNodes;
 
 	/**
 	 * Constructor of message
@@ -16,7 +18,7 @@ public class AddToGridMessage implements IMessage{
 	 * @param neighboringNodes
 	 *            a collection of neighboring nodes
 	 */
-	public AddToGridMessage(Collection<Segment> neighboringNodes) {
+	public AddToGridMessage(Collection<NodeInfo> neighboringNodes) {
 		this.neighoringNodes = neighboringNodes;
 	}
 
@@ -24,7 +26,7 @@ public class AddToGridMessage implements IMessage{
 	 * Get the neighboring nodes
 	 * @return the neighboring nodes
 	 */
-	public Collection<Segment> getNeighboringNodes() {
+	public Collection<NodeInfo> getNeighboringNodes() {
 		return neighoringNodes;
 	}
 
