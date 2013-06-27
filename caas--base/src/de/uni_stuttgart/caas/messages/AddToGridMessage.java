@@ -3,14 +3,13 @@ package de.uni_stuttgart.caas.messages;
 import java.util.Collection;
 
 import de.uni_stuttgart.caas.base.NodeInfo;
-import delaunay.Segment;
 
 /**
  * Message sent to cache node containing information about neighboring nodes
  */
 public class AddToGridMessage implements IMessage{
 
-	private Collection<NodeInfo> neighoringNodes;
+	private Collection<NodeInfo> neighboringNodes;
 
 	/**
 	 * Constructor of message
@@ -19,7 +18,7 @@ public class AddToGridMessage implements IMessage{
 	 *            a collection of neighboring nodes
 	 */
 	public AddToGridMessage(Collection<NodeInfo> neighboringNodes) {
-		this.neighoringNodes = neighboringNodes;
+		this.neighboringNodes = neighboringNodes;
 	}
 
 	/**
@@ -27,7 +26,7 @@ public class AddToGridMessage implements IMessage{
 	 * @return the neighboring nodes
 	 */
 	public Collection<NodeInfo> getNeighboringNodes() {
-		return neighoringNodes;
+		return neighboringNodes;
 	}
 
 	@Override
