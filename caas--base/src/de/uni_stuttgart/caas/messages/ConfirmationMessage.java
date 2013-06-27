@@ -1,4 +1,4 @@
-package de.uni_stuttgart.caas.admin.messages;
+package de.uni_stuttgart.caas.messages;
 
 /**
  * Encapsulates a confirmation message that contains a status code, which

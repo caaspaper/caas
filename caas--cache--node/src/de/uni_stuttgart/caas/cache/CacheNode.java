@@ -1,10 +1,10 @@
 package de.uni_stuttgart.caas.cache;
 
+import java.util.Collection;
 import java.util.TreeSet;
-import de.uni_stuttgart.caas.admin.messages.ConfirmationMessage;
-import de.uni_stuttgart.caas.admin.messages.IMessage;
-import de.uni_stuttgart.caas.admin.messages.IMessage.MessageType;
-import de.uni_stuttgart.caas.admin.messages.JoinMessage;
+import de.uni_stuttgart.caas.base.NodeInfo;
+import de.uni_stuttgart.caas.messages.*;
+import de.uni_stuttgart.caas.messages.IMessage.MessageType;
 import delaunay.Point;
 
 /**

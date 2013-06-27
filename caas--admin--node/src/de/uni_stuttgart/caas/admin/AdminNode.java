@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import de.uni_stuttgart.caas.admin.messages.JoinMessage;
+import de.uni_stuttgart.caas.messages.JoinMessage;
 
 /**
  * Run multithreaded server and obey the following protocol:

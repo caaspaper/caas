@@ -1,4 +1,4 @@
-package de.uni_stuttgart.caas.admin.messages;
+package de.uni_stuttgart.caas.messages;
 
 import java.util.Collection;
 import delaunay.Segment;
