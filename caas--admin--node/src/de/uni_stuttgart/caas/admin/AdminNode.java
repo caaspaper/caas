@@ -21,7 +21,7 @@ import de.uni_stuttgart.caas.messages.IMessage;
 public class AdminNode {
 
 	private final int INITIAL_CAPACITY;
-	private final int PORT_NUMBER = 5007;
+	public final static int PORT_NUMBER = 5007;
 
 	/** Current state of the admin node */
 	private AdminNodeState state;

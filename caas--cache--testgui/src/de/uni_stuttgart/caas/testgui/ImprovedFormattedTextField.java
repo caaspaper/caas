@@ -53,7 +53,18 @@ public class ImprovedFormattedTextField extends JFormattedTextField {
     setValue( aValue );
   }
 
-  private void updateBackgroundOnEachUpdate() {
+  // (acgessler, 2013-05-27) added this to enable use with RegexFormatter
+  public ImprovedFormattedTextField(RegexFormatter regexFormatter) {
+	  super( regexFormatter );
+	    setFocusLostBehavior( JFormattedTextField.COMMIT_OR_REVERT );
+	    updateBackgroundOnEachUpdate();
+	    //improve the caret behavior
+	    //see also http://tips4java.wordpress.com/2010/02/21/formatted-text-field-tips/
+	   //addFocusListener( new MousePositionCorrectorListener() );
+
+}
+
+private void updateBackgroundOnEachUpdate() {
     getDocument().addDocumentListener( new DocumentListener() {
       @Override
       public void insertUpdate( DocumentEvent e ) {

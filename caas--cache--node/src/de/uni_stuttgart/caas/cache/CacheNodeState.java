@@ -6,6 +6,10 @@ package de.uni_stuttgart.caas.cache;
  */
 public enum CacheNodeState {
 
+	/**
+	 *  The state a node starts with
+	 */
+	INITIAL_STATE,
 	
 	/**
 	 *  In this state the cache node, send a JOIN message to the admin, and awaits its location data

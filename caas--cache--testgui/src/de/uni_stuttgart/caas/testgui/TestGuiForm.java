@@ -7,83 +7,135 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
+import java.util.regex.Pattern;
 
 import javax.swing.*;
 
+import de.uni_stuttgart.caas.admin.AdminNode;
+
 public class TestGuiForm extends JFrame {
-	
+
+	private final short DEFAULT_ADMIN_PORT = AdminNode.PORT_NUMBER;
+	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
+
+	private final int DEFAULT_CAPACITY = 64;
+
 	private final int WIDTH = 1000;
 	private final int HEIGHT = 700;
+
+	private final JTextArea textArea;
+	private final ImprovedFormattedTextField numNodesField;
+	private final ImprovedFormattedTextField ipAdminField;
+
+	private final ImprovedFormattedTextField adminPortField;
+	private final ImprovedFormattedTextField adminCapacityField;
 	
-	private JTextArea textArea;
+	private final JCheckBox adminDebuggerCheckBox;
+	
 
 	public TestGuiForm() {
 		setTitle("CaaS Admin GUI");
-		
+
 		final Insets insets = getInsets();
-		setSize(WIDTH + insets.left + insets.right, HEIGHT + insets.top + insets.bottom);
+		setSize(WIDTH + insets.left + insets.right, HEIGHT + insets.top
+				+ insets.bottom);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setResizable(false);
-		
 
 		// null layout to keep SWING from screwing it all up
 		setLayout(null);
 
 		// console/stdout GUI
 		textArea = new JTextArea();
-		
+
 		JScrollPane scrollPane = new JScrollPane(textArea);
-		scrollPane.setBounds(0, HEIGHT-250, WIDTH, 250);
-		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		scrollPane.setBounds(0, HEIGHT - 250, WIDTH, 250);
+		scrollPane
+				.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		getContentPane().add(scrollPane);
-		
+
 		//
 		JButton btn = new JButton("Launch Admin Node");
 		btn.addActionListener(new ActionListener() {
-			
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching Admin Node");
 			}
 		});
-		btn.setBounds(WIDTH-250, 100, 200, 50);
+		btn.setBounds(WIDTH - 250, 100, 200, 50);
 		getContentPane().add(btn);
-	
+
+		JLabel label = new JLabel("Port to listen to");
+		label.setBounds(30, 100, 200, 30);
+		getContentPane().add(label);
+
+		NumberFormat intFormat = NumberFormat.getIntegerInstance();
+		intFormat.setGroupingUsed(false);
+
+		adminPortField = new ImprovedFormattedTextField(intFormat,
+				DEFAULT_ADMIN_PORT);
+		adminPortField.setColumns(20);
+		adminPortField.setBounds(240, 100, 200, 30);
+		getContentPane().add(adminPortField);
+
+		label = new JLabel("Grid node capacity");
+		label.setBounds(30, 160, 200, 30);
+		getContentPane().add(label);
+
+		adminCapacityField = new ImprovedFormattedTextField(intFormat,
+				DEFAULT_CAPACITY);
+		adminCapacityField.setColumns(20);
+		adminCapacityField.setBounds(240, 160, 200, 30);
+		getContentPane().add(adminCapacityField);
 		
-		//
+		adminDebuggerCheckBox = new JCheckBox("Attach as debugger");
+		adminDebuggerCheckBox.setBounds(490, 160, 200, 30);
+		adminDebuggerCheckBox.setSelected(true);
+		getContentPane().add(adminDebuggerCheckBox);
+		
+		// node configuration
+
 		btn = new JButton("Launch Nodes Locally");
 		btn.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("Launching <num> local Nodes");
+				System.out.println("Launching " + numNodesField.getValue()
+						+ " local nodes");
+				System.out.println("Assuming admin is running at "
+						+ ipAdminField.getValue());
 			}
 		});
-		btn.setBounds(WIDTH-250, 300, 200, 50);
+		btn.setBounds(WIDTH - 250, 300, 200, 50);
 		getContentPane().add(btn);
-		
-		JLabel label = new JLabel("Number of nodes to run");
-		label.setBounds(10, 300, 200, 30);
+
+		label = new JLabel("Number of nodes to run");
+		label.setBounds(30, 300, 200, 30);
 		getContentPane().add(label);
-		
-		NumberFormat intFormat = NumberFormat.getIntegerInstance();
-        ImprovedFormattedTextField numNodesField = new ImprovedFormattedTextField( 
-        		intFormat, 64 );
-        numNodesField.setColumns( 20 );
-        numNodesField.setBounds(220, 300, 200, 30);
-        getContentPane().add(numNodesField);
-        
-        label = new JLabel("IP:Port of Admin Node");
-		label.setBounds(10, 360, 200, 30);
+
+		numNodesField = new ImprovedFormattedTextField(intFormat, 64);
+		numNodesField.setColumns(20);
+		numNodesField.setBounds(240, 300, 200, 30);
+		getContentPane().add(numNodesField);
+
+		label = new JLabel("IP:Port of Admin Node");
+		label.setBounds(30, 360, 200, 30);
 		getContentPane().add(label);
-		
+
 		NumberFormat ipFormat = NumberFormat.getIntegerInstance();
-        ImprovedFormattedTextField ipAdminField = new ImprovedFormattedTextField( 
-        		intFormat, 64 );
-        ipAdminField.setColumns( 20 );
-        ipAdminField.setBounds(220, 360, 200, 30);
-        getContentPane().add(ipAdminField );
-        
+		ipAdminField = new ImprovedFormattedTextField(new RegexFormatter(
+				Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
+
+		ipAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);
+
+		ipAdminField.setColumns(20);
+		ipAdminField.setBounds(240, 360, 200, 30);
+		getContentPane().add(ipAdminField);
+
 	}
 
 	// this taken from
@@ -129,7 +181,7 @@ public class TestGuiForm extends JFrame {
 			public void run() {
 				TestGuiForm form = new TestGuiForm();
 				form.setVisible(true);
-				
+
 				form.redirectSystemStreams();
 			}
 		});
