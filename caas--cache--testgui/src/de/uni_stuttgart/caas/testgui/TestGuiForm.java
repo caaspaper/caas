@@ -11,11 +11,11 @@ import java.util.regex.Pattern;
 
 import javax.swing.*;
 
-//import de.uni_stuttgart.caas.admin.AdminNode;
+import de.uni_stuttgart.caas.admin.AdminNode;
 
 public class TestGuiForm extends JFrame {
 	
-	private final short DEFAULT_ADMIN_PORT = 5007;
+	private final short DEFAULT_ADMIN_PORT = AdminNode.PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	
 	private final int WIDTH = 1000;
