@@ -7,15 +7,23 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
+import java.util.regex.Pattern;
 
 import javax.swing.*;
 
+//import de.uni_stuttgart.caas.admin.AdminNode;
+
 public class TestGuiForm extends JFrame {
+	
+	private final short DEFAULT_ADMIN_PORT = 5007;
+	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	
 	private final int WIDTH = 1000;
 	private final int HEIGHT = 700;
 	
 	private JTextArea textArea;
+	private ImprovedFormattedTextField numNodesField;
+	private ImprovedFormattedTextField ipAdminField;
 
 	public TestGuiForm() {
 		setTitle("CaaS Admin GUI");
@@ -56,7 +64,8 @@ public class TestGuiForm extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("Launching <num> local Nodes");
+				System.out.println("Launching " + numNodesField.getValue()  + " local nodes");
+				System.out.println("Assuming admin is running at " + ipAdminField.getValue());
 			}
 		});
 		btn.setBounds(WIDTH-250, 300, 200, 50);
@@ -67,8 +76,7 @@ public class TestGuiForm extends JFrame {
 		getContentPane().add(label);
 		
 		NumberFormat intFormat = NumberFormat.getIntegerInstance();
-        ImprovedFormattedTextField numNodesField = new ImprovedFormattedTextField( 
-        		intFormat, 64 );
+        numNodesField = new ImprovedFormattedTextField( intFormat, 64 );
         numNodesField.setColumns( 20 );
         numNodesField.setBounds(220, 300, 200, 30);
         getContentPane().add(numNodesField);
@@ -78,8 +86,14 @@ public class TestGuiForm extends JFrame {
 		getContentPane().add(label);
 		
 		NumberFormat ipFormat = NumberFormat.getIntegerInstance();
-        ImprovedFormattedTextField ipAdminField = new ImprovedFormattedTextField( 
-        		intFormat, 64 );
+		ipAdminField = new ImprovedFormattedTextField( new RegexFormatter(Pattern.compile(
+        				"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."	+
+        				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."	+
+        				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."	+
+        				"([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")) );
+        
+		ipAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);
+		
         ipAdminField.setColumns( 20 );
         ipAdminField.setBounds(220, 360, 200, 30);
         getContentPane().add(ipAdminField );
