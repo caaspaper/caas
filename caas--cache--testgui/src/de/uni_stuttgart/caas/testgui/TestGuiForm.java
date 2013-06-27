@@ -18,12 +18,18 @@ public class TestGuiForm extends JFrame {
 	private final short DEFAULT_ADMIN_PORT = AdminNode.PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	
+	private final int DEFAULT_CAPACITY = 64;
+	
+	
 	private final int WIDTH = 1000;
 	private final int HEIGHT = 700;
 	
 	private JTextArea textArea;
 	private ImprovedFormattedTextField numNodesField;
 	private ImprovedFormattedTextField ipAdminField;
+	
+	private ImprovedFormattedTextField adminPortField;
+	private ImprovedFormattedTextField adminCapacityField;
 
 	public TestGuiForm() {
 		setTitle("CaaS Admin GUI");
@@ -56,9 +62,33 @@ public class TestGuiForm extends JFrame {
 		});
 		btn.setBounds(WIDTH-250, 100, 200, 50);
 		getContentPane().add(btn);
+		
+		  
+        JLabel label = new JLabel("Port to listen to");
+		label.setBounds(30, 100, 200, 30);
+		getContentPane().add(label);
+		
+		NumberFormat intFormat = NumberFormat.getIntegerInstance();
+		intFormat.setGroupingUsed(false);
+		
+        adminPortField = new ImprovedFormattedTextField( intFormat, DEFAULT_ADMIN_PORT );
+        adminPortField.setColumns( 20 );
+        adminPortField.setBounds(240, 100, 200, 30);
+        getContentPane().add(adminPortField);
+        
+        label = new JLabel("Grid node capacity");
+		label.setBounds(30, 160, 200, 30);
+		getContentPane().add(label);
+		
+        adminCapacityField = new ImprovedFormattedTextField( intFormat, DEFAULT_CAPACITY );
+        adminCapacityField.setColumns( 20 );
+        adminCapacityField.setBounds(240, 160, 200, 30);
+        getContentPane().add(adminCapacityField);
+        
 	
 		
-		//
+		// node configuration 
+		
 		btn = new JButton("Launch Nodes Locally");
 		btn.addActionListener(new ActionListener() {
 
@@ -71,18 +101,17 @@ public class TestGuiForm extends JFrame {
 		btn.setBounds(WIDTH-250, 300, 200, 50);
 		getContentPane().add(btn);
 		
-		JLabel label = new JLabel("Number of nodes to run");
-		label.setBounds(10, 300, 200, 30);
+		label = new JLabel("Number of nodes to run");
+		label.setBounds(30, 300, 200, 30);
 		getContentPane().add(label);
 		
-		NumberFormat intFormat = NumberFormat.getIntegerInstance();
         numNodesField = new ImprovedFormattedTextField( intFormat, 64 );
         numNodesField.setColumns( 20 );
-        numNodesField.setBounds(220, 300, 200, 30);
+        numNodesField.setBounds(240, 300, 200, 30);
         getContentPane().add(numNodesField);
         
         label = new JLabel("IP:Port of Admin Node");
-		label.setBounds(10, 360, 200, 30);
+		label.setBounds(30, 360, 200, 30);
 		getContentPane().add(label);
 		
 		NumberFormat ipFormat = NumberFormat.getIntegerInstance();
@@ -95,9 +124,10 @@ public class TestGuiForm extends JFrame {
 		ipAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);
 		
         ipAdminField.setColumns( 20 );
-        ipAdminField.setBounds(220, 360, 200, 30);
+        ipAdminField.setBounds(240, 360, 200, 30);
         getContentPane().add(ipAdminField );
         
+     
 	}
 
 	// this taken from
