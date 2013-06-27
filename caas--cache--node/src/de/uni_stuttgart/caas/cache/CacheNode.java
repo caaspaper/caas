@@ -1,5 +1,11 @@
 package de.uni_stuttgart.caas.cache;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.Collection;
 import java.util.TreeSet;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -33,7 +39,24 @@ public class CacheNode {
 	/**
 	 * current state
 	 */
-	private CacheNodeState currentState;
+	private CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
+	
+	
+	private Thread connectionToAdmin = null;
+	
+	public CacheNode() {
+		
+	}
+	
+	public CacheNode(InetSocketAddress addr) {
+		System.out.println("blat");
+//		try {
+//			connectionToAdmin = new Thread(new AdminConnector(addr));
+//		} catch (IOException e) {
+//			System.out.println("Could not connec to server");
+//		}
+		connectionToAdmin.start();
+	}
 
 	/**
 	 * initialize node and generate JOIN-Message
@@ -71,34 +94,109 @@ public class CacheNode {
 	public IMessage process(IMessage message) {
 
 		MessageType type = message.GetMessage();
+		
 		switch (currentState) {
+		
+		case INITIAL_STATE:
+			if (type != MessageType.CONFIRM) {
+				System.out.println("Error in Protocol");
+				System.exit(-1);
+			}
+			currentState = CacheNodeState.AWAITING_DATA;
+			break;
+			
+		case AWAITING_DATA:
+
+			if (type != MessageType.ADD_TO_GRID) {
+				System.out.println("Error in Protocol");
+				System.exit(-1);
+			}
+			addNeighboringNodes(((AddToGridMessage) message).getNeighboringNodes());
+			currentState = CacheNodeState.AWAITING_ACTIVATION;
+			return new ConfirmationMessage(0, "Added neighbors");
 
 		case AWAITING_ACTIVATION:
 
 			if (type != MessageType.ACTIVATE) {
-
+				System.out.println("Error in Protocol");
+				System.exit(-1);
 			}
 			currentState = CacheNodeState.ACTIVE;
-			break;
-
-		case AWAITING_DATA:
-
-			if (type != MessageType.ADD_TO_GRID) {
-
-			}
-			currentState = CacheNodeState.AWAITING_ACTIVATION;
-			break;
+			return new ConfirmationMessage(0, "cache node is now active");
 
 		case ACTIVE:
-
+			// TODO what comes here?
 			break;
 
 		default:
-			break;
+			System.out.println("Error in Protocol");
+			System.exit(-1);
 		}
 		
-		// TODO change default response
-		return new ConfirmationMessage(-1, "error"); 
+		return null; 
+	}
+	
+	
+	public void stopNode() {
+		connectionToAdmin.interrupt();
+	}
+
+	/**
+	 * 
+	 * @param collection
+	 */
+	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodes) {
+		neighboringNodes.addAll(neighboringNodes);
+	}
+	
+	
+	private class AdminConnector implements Runnable {
+
+		private final Socket serverSocket;
+		
+		public AdminConnector(InetSocketAddress address) throws IOException {
+			serverSocket = new Socket(address.getAddress(), address.getPort());
+		}
+		
+		@Override
+		public void run() {
+			
+			ObjectInputStream in = null;
+			ObjectOutputStream out = null;
+			
+			try {
+				in = new ObjectInputStream(serverSocket.getInputStream());
+				out = new ObjectOutputStream(serverSocket.getOutputStream());
+			} catch (IOException e) {
+				System.out.println("Could not initiate input and output with server");
+				System.exit(-1);
+			}
+			try {
+				out.writeObject(new JoinMessage());
+				
+				while (true) {
+					IMessage message = null;
+					try {
+						 message = (IMessage) in.readObject();
+					} catch (ClassNotFoundException e) {
+						System.out.println("received unknown class!");
+						System.exit(-1);
+					} catch (ClassCastException e) {
+						System.out.println("error while casting to IMessage");
+						System.exit(-1);
+					}
+					IMessage responce = process(message);
+					if (responce != null) {
+						out.writeObject(responce);
+					}
+				}				
+				
+			} catch (IOException e) {
+				System.out.println("Error while sending/ receiving data");
+				System.exit(-1);
+			}
+		}
+		
 	}
 
 }
