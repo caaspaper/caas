@@ -2,18 +2,20 @@ package de.uni_stuttgart.caas.admin;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.PrintWriter;
+import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import de.uni_stuttgart.caas.messages.JoinMessage;
+import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
+import de.uni_stuttgart.caas.messages.ConfirmationMessage;
+import de.uni_stuttgart.caas.messages.IMessage;
 
 /**
  * Run multithreaded server and obey the following protocol:
  * 
  * INITIAL_SIGNUP_PHASE, grid initial capacity not exceeded and node didn't sign
  * up before FAIL otherwise
-
+ * 
  * 
  */
 public class AdminNode {
@@ -30,10 +32,19 @@ public class AdminNode {
 	 */
 	private JoinRequestManager joinRequests;
 
+	/**
+	 * 
+	 * @return state
+	 */
 	public AdminNodeState getState() {
 		return state;
 	}
 
+	/**
+	 * Creates Administrative Node
+	 * 
+	 * @param initialCapacity
+	 */
 	public AdminNode(int initialCapacity) {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
 
@@ -42,7 +53,6 @@ public class AdminNode {
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 
-		// TODO: run multithreaded server
 		ServerSocket serverSocket = null;
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
@@ -56,72 +66,146 @@ public class AdminNode {
 		while (true) {
 			try {
 				Socket clientSocket = serverSocket.accept();
-				Thread t = new Thread(new NodeConnector(clientSocket,
-						"NodeJoin"));
+				NodeConnector nc = new NodeConnector(clientSocket); // declared
+																	// this way
+																	// bc later
+																	// we access
+																	// the
+																	// nc.clientAddress
+				Thread t = new Thread(nc);
 				t.start();
 			} catch (IOException e) {
 				System.out.println("Accept failed: PORT_NUMBER");
-				System.exit(-1); // TODO: fix exit (maybe overkill) throw
-									// exception instead?
+				e.printStackTrace();
 			}
 		}
 	}
 
+	/**
+	 * 
+	 * 
+	 *
+	 */
 	private class NodeConnector implements Runnable {
-		private Socket clientSocket;
+		private final Socket clientSocket;
+		private final InetSocketAddress clientAddress;
 
-		// string attribute?
-		public NodeConnector(Socket cs, String s) {
-			this.clientSocket = cs;
-			// string field?
+		/**
+		 * 
+		 * @param cS
+		 */
+		public NodeConnector(Socket cS) {
+			this.clientSocket = cS;
+			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
+			this.clientAddress = (InetSocketAddress) cS
+					.getRemoteSocketAddress();
 		}
 
-		@Override
+		/**
+		 *  Threadstarter
+		 */
 		public void run() {
 			ObjectInputStream in = null;
-			PrintWriter out = null;
+			ObjectOutputStream out = null;
 			try {
 				in = new ObjectInputStream(clientSocket.getInputStream());
-				out = new PrintWriter(clientSocket.getOutputStream(), true);
+				out = new ObjectOutputStream(clientSocket.getOutputStream());
 			} catch (IOException e) {
 				System.out.println("");
-				System.exit(-1);
+				e.printStackTrace();
 			}
 			while (true) {
-				try {
-					Object obj = in.readObject();
+				IMessage message = null;
+				try { // message, i.e. object, passed over connection
+					message = (IMessage) in.readObject(); // casts to one of the
+															// types enumerated
+															// in IMessage
 				} catch (ClassNotFoundException e) {
 					System.out.println("Object class not found");
-					System.exit(-1); // TODO
-
+					e.printStackTrace();
+				} catch (ClassCastException e) {
+					System.out.println("Cast of obj to type IMessage failed");
+					System.exit(-1);
 				} catch (IOException e) {
 					System.out.println("Read failed");
-					System.exit(-1); // TODO
+					e.printStackTrace();
+				}
+				IMessage response = process(message, clientAddress);
+				if (response != null) { // TODO finish
+					try {
+						out.writeObject(response);
+					} catch (IOException e) {
+						System.out.println("Write to client failed");
+						e.printStackTrace();
+					}
 				}
 			}
 		}
 	}
 
 	/**
+	 * 
 	 * @param message
-	 *            The join message sent by node to admin node.
+	 * @param clientAddress
+	 * @return
+	 * @note 
 	 */
-	private void respondToJoinRequest(JoinMessage message) {
+	private IMessage process(IMessage message, InetSocketAddress clientAddress) {
+		IMessage response = null;
+		switch (message.GetMessage()) {
+		case CONFIRM:
+			break;
 
+		case JOIN:
+			JoinRequest jr = new JoinRequest(clientAddress);
+			assert jr != null;
+			response = respondToJoinRequest(jr);
+			return response;
+
+		default:
+			break;
+		}
+
+		return null;
 	}
 
 	/**
+	 * @param request
+	 *            The individual join request sent by node to admin node. A join
+	 *            request contains the IP + Port info of the requesting node
+	 * @return cm Returns confirmation message if the node was successfully
+	 *         joined.
+	 *         
+	 * @note sc refers to status code of join request success. 
+	 * 		If node was added to JoinRequest List, then sc = 0. 
+	 * 			Otherwise, sc is non-null.
+	 */
+	private IMessage respondToJoinRequest(JoinRequest request) {
+		int sc = 0;
+		String m = null; //optional, may stay null
+		try {
+			joinRequests.TryAdd(request);
+		} catch (IllegalStateException e) {
+			sc = -1;
+		}
+		ConfirmationMessage cm = new ConfirmationMessage(sc, m);
+		return cm;
+	}
+
+	/**
+	 * TODO
+	 * @return 
 	 * 
 	 */
-	private void addNodeToGrid() {
-
+	private IMessage addNodeToGrid() {
+		return null;
 	}
 
 	/**
 	 * TODO
 	 */
-	private void activateNode() {
-
+	private IMessage activateNode() {
+		return null;
 	}
 
 	/**
