@@ -28,6 +28,10 @@ public class Grid {
 	 */
 	public Map<InetSocketAddress, NodeInfo> connectedNodes;
 
+	/**
+	 * 
+	 * @param joinRequests
+	 */
 	public Grid(JoinRequestManager joinRequests) {
 		assert joinRequests.IsComplete();
 		// TODO construct grid based on join requests

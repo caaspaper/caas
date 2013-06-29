@@ -15,10 +15,10 @@ import de.uni_stuttgart.caas.admin.AdminNode;
 
 public class TestGuiForm extends JFrame {
 
-	private final short DEFAULT_ADMIN_PORT = AdminNode.PORT_NUMBER;
+	private final short DEFAULT_ADMIN_PORT = AdminNode.DEFAULT_PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 
-	private final int DEFAULT_CAPACITY = 64;
+	private final int DEFAULT_CAPACITY = AdminNode.DEFAULT_INITIAL_CAPACITY;
 
 	private final int WIDTH = 1000;
 	private final int HEIGHT = 700;

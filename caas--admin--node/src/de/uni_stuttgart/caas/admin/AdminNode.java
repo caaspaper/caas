@@ -34,13 +34,16 @@ import delaunay.Segment;
  */
 public class AdminNode {
 
-	private final int INITIAL_CAPACITY;
-	public final static int PORT_NUMBER = 5007;
-
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
-	/** */
+	public final static int DEFAULT_INITIAL_CAPACITY = 64;
+	public final int INITIAL_CAPACITY;
+
+	public final static int DEFAULT_PORT_NUMBER = 5007;
+	public final int PORT_NUMBER;
+
+	/** List of nodes requesting to join grid */
 	private JoinRequestManager joinRequests;
 
 	/** */
@@ -57,13 +60,35 @@ public class AdminNode {
 	/**
 	 * Creates Administrative Node
 	 * 
-	 * @param initialCapacity
+	 * //first instance where Alex has Java-envy. ^_^ Alex.state = denial;
+	 * 
+	 * @throws Exception
 	 */
-	public AdminNode(int initialCapacity) {
+	public AdminNode() {
+
+		this(DEFAULT_PORT_NUMBER, DEFAULT_INITIAL_CAPACITY);
+	}
+
+	/**
+	 * Creates Administrative Node
+	 * 
+	 * @param initialCapacity
+	 * @throws Exception
+	 */
+	public AdminNode(int portNumber, int initialCapacity) {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
 
-		INITIAL_CAPACITY = initialCapacity;
-		assert initialCapacity > 0;
+		if (portNumber < 1024 || portNumber > 49151) {
+			throw new IllegalArgumentException();
+		} else {
+			PORT_NUMBER = portNumber;
+		}
+
+		if (initialCapacity < 0) {
+			throw new IllegalArgumentException();
+		} else {
+			INITIAL_CAPACITY = initialCapacity;
+		}
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 
@@ -80,11 +105,7 @@ public class AdminNode {
 		while (true) {
 			try {
 				Socket clientSocket = serverSocket.accept();
-				NodeConnector nc = new NodeConnector(clientSocket); // @note
-																	// later we
-																	// need to
-																	// access
-																	// nc.clientAddress
+				NodeConnector nc = new NodeConnector(clientSocket);
 				Thread t = new Thread(nc);
 				t.start();
 			} catch (IOException e) {
@@ -109,6 +130,7 @@ public class AdminNode {
 		 */
 		public NodeConnector(Socket cS) {
 			this.clientSocket = cS;
+			
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS
 					.getRemoteSocketAddress();
@@ -120,6 +142,7 @@ public class AdminNode {
 		public void run() {
 			ObjectInputStream in = null;
 			ObjectOutputStream out = null;
+			
 			try {
 				in = new ObjectInputStream(clientSocket.getInputStream());
 				out = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -127,6 +150,7 @@ public class AdminNode {
 				System.out.println("");
 				e.printStackTrace();
 			}
+			
 			while (true) {
 				IMessage message = null;
 				try { // message, i.e. object, passed over connection
@@ -143,6 +167,7 @@ public class AdminNode {
 					System.out.println("Read failed");
 					e.printStackTrace();
 				}
+				
 				IMessage response = process(message, clientAddress);
 				if (response != null) { // TODO finish
 					try {
