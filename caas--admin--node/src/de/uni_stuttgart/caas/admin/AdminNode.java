@@ -9,7 +9,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -17,12 +16,15 @@ import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
-import delaunay.DelaunayTriangulation;
 import delaunay.Knuth;
 import delaunay.Point;
 import delaunay.Segment;
 
 /**
+ * AdminNode
+ * 
+ * Version: 1.0
+ * 
  * Run multithreaded server and obey the following protocol:
  * 
  * INITIAL_SIGNUP_PHASE, grid initial capacity not exceeded and node didn't sign
@@ -35,24 +37,14 @@ public class AdminNode {
 	private final int INITIAL_CAPACITY;
 	public final static int PORT_NUMBER = 5007;
 
-	/**
-	 * Provides access to triangulation
-	 */
-	private DelaunayTriangulation triangulation;
-
-	/**
-	 * Set containing all connected Nodes
-	 */
-	private Map<InetSocketAddress, NodeInfo> connectedNodes;
-
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
-	/**
-	 * Used during INITIAL_SIGNUP_PHASE to keep track of all nodes who requested
-	 * to JOIN the grid.
-	 */
+	/** */
 	private JoinRequestManager joinRequests;
+
+	/** */
+	private Grid grid = null;
 
 	/**
 	 * 
@@ -88,11 +80,10 @@ public class AdminNode {
 		while (true) {
 			try {
 				Socket clientSocket = serverSocket.accept();
-				NodeConnector nc = new NodeConnector(clientSocket); // declared
-																	// this way
-																	// bc later
-																	// we access
-																	// the
+				NodeConnector nc = new NodeConnector(clientSocket); // @note
+																	// later we
+																	// need to
+																	// access
 																	// nc.clientAddress
 				Thread t = new Thread(nc);
 				t.start();
@@ -195,8 +186,9 @@ public class AdminNode {
 	 * @param request
 	 *            The individual join request sent by node to admin node. A join
 	 *            request contains the IP + Port info of the requesting node
+	 * 
 	 * @return cm Returns confirmation message if the node was successfully
-	 *         joined.
+	 *         added to join list.
 	 * 
 	 * @note sc refers to status code of join request success. If node was added
 	 *       to JoinRequest List, then sc = 0. Otherwise, sc is non-null.
@@ -222,58 +214,9 @@ public class AdminNode {
 	 */
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
 
-		Collection<Segment> segments = triangulation.getSegments();
-		Collection<NodeInfo> infoOnNeighbors = new ArrayList<>();
-		Point pointOfNode = connectedNodes.get(addressOfNode)
-				.getLocationOfNode();
-
-		for (Segment s : segments) {
-			List<Point> pointsInSegment = s.getPoints();
-
-			// TODO Add the address of the point, we need a mapping for that
-			if (pointsInSegment.get(0).equals(pointOfNode)) {
-				infoOnNeighbors.add(new NodeInfo(null, pointsInSegment.get(1)));
-			} else {
-				infoOnNeighbors.add(new NodeInfo(null, pointsInSegment.get(0)));
-			}
-		}
+		Collection<NodeInfo> infoOnNeighbors = grid
+				.getNeighborInfo(addressOfNode);
 		return new AddToGridMessage(infoOnNeighbors);
-	}
-
-	/**
-	 * Called once to add all the nodes from the join request manager to the
-	 * hashmap assiging them a location on the grid
-	 * 
-	 */
-	private void distributeCacheNodesOnGrid() {
-
-	}
-
-	/**
-	 * performes a triangulation on the nodes currently in the hashmap
-	 */
-	private void performNewTriangulation() {
-		Set<InetSocketAddress> keys = connectedNodes.keySet();
-		List<Point> points = new ArrayList<>();
-		for (InetSocketAddress k : keys) {
-			points.add(connectedNodes.get(k).getLocationOfNode());
-		}
-		triangulation = new Knuth(points);
-		triangulation.update();
-	}
-
-	/**
-	 * Adds a point to the triangulation and updates the triangulation
-	 * 
-	 * @param p
-	 *            the point to add
-	 */
-	private void addNodeToTriangulation(Point p) {
-		if (triangulation == null) {
-			triangulation = new Knuth();
-		}
-		triangulation.addPoint(p);
-		triangulation.update();
 	}
 
 	/**
