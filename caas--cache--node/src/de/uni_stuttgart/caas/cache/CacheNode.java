@@ -44,7 +44,7 @@ public class CacheNode {
 	 * Holds the connection to the admin node
 	 */
 	private Thread connectionToAdmin = null;
-	
+
 	/**
 	 * Construct a new cache node given the address of the admin node
 	 * 
@@ -52,6 +52,13 @@ public class CacheNode {
 	 *            the address of the admin node
 	 */
 	public CacheNode(InetSocketAddress addr) {
+		if (addr.isUnresolved()) {
+			throw new IllegalArgumentException("unresolved host: "
+					+ addr.getHostString());
+		}
+
+		System.out.println("connecting to " + addr.getAddress() + ":"
+				+ addr.getPort());
 
 		try {
 			connectionToAdmin = new Thread(new AdminConnector(addr));
@@ -59,6 +66,19 @@ public class CacheNode {
 			System.out.println("Could not connect to server");
 		}
 		connectionToAdmin.start();
+	}
+
+	/**
+	 * Constructs a new CacheNode given a host and a port
+	 * 
+	 * @param host
+	 *            the hostname or ip of the admin node
+	 * @param port
+	 *            the port, the admin is running on
+	 */
+	public CacheNode(String host, String port) {
+
+		this(new InetSocketAddress(host, Integer.parseInt(port)));
 	}
 
 	/**
@@ -178,7 +198,7 @@ public class CacheNode {
 		 *             if the Socket can't be created, pass the error up
 		 */
 		public AdminConnector(InetSocketAddress address) throws IOException {
-			
+
 			serverSocket = new Socket(address.getAddress(), address.getPort());
 		}
 
@@ -196,9 +216,9 @@ public class CacheNode {
 						.println("Could not initiate input and output with server");
 				System.exit(-1);
 			}
-			
+
 			try {
-				
+
 				// initiate connection by sending a join message
 				out.writeObject(new JoinMessage());
 
@@ -215,7 +235,7 @@ public class CacheNode {
 						System.exit(-1);
 					}
 					IMessage responce = process(message);
-					
+
 					// as not to Confirm confirm messages
 					if (responce != null) {
 						out.writeObject(responce);
@@ -228,6 +248,14 @@ public class CacheNode {
 			}
 		}
 
+	}
+	
+	
+	public static void main(String[] args) {
+		if (args.length != 2) {
+			throw new IllegalArgumentException("please provide the host and the port of the admin node");
+		}
+		new CacheNode(args[0], args[1]);
 	}
 
 }
