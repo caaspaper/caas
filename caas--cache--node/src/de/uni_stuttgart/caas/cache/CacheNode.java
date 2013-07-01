@@ -124,7 +124,6 @@ public class CacheNode {
 		case INITIAL_STATE:
 			if (type != MessageType.CONFIRM) {
 				System.out.println("Error in Protocol");
-				System.exit(-1);
 			}
 			currentState = CacheNodeState.AWAITING_DATA;
 			break;
@@ -133,7 +132,6 @@ public class CacheNode {
 
 			if (type != MessageType.ADD_TO_GRID) {
 				System.out.println("Error in Protocol");
-				System.exit(-1);
 			}
 			addNeighboringNodes(((AddToGridMessage) message)
 					.getNeighboringNodes());
@@ -144,7 +142,6 @@ public class CacheNode {
 
 			if (type != MessageType.ACTIVATE) {
 				System.out.println("Error in Protocol");
-				System.exit(-1);
 			}
 			currentState = CacheNodeState.ACTIVE;
 			return new ConfirmationMessage(0, "cache node is now active");
@@ -155,7 +152,6 @@ public class CacheNode {
 
 		default:
 			System.out.println("Error in Protocol");
-			System.exit(-1);
 		}
 
 		return null;
@@ -209,14 +205,11 @@ public class CacheNode {
 			ObjectOutputStream out = null;
 
 			try {
-				System.out.println("trying to create inputstream in cachenode");
-				in = new ObjectInputStream(serverSocket.getInputStream());
-				System.out.println("trying to create outputstream in cachenode");
 				out = new ObjectOutputStream(serverSocket.getOutputStream());
+				in = new ObjectInputStream(serverSocket.getInputStream());
 			} catch (IOException e) {
 				System.out
 						.println("Could not initiate input and output with server");
-				System.exit(-1);
 			}
 
 			try {
@@ -231,10 +224,8 @@ public class CacheNode {
 						message = (IMessage) in.readObject();
 					} catch (ClassNotFoundException e) {
 						System.out.println("received unknown class!");
-						System.exit(-1);
 					} catch (ClassCastException e) {
 						System.out.println("error while casting to IMessage");
-						System.exit(-1);
 					}
 					IMessage responce = process(message);
 
@@ -246,7 +237,6 @@ public class CacheNode {
 
 			} catch (IOException e) {
 				System.out.println("Error while sending/ receiving data");
-				System.exit(-1);
 			}
 		}
 

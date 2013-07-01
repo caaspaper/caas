@@ -138,10 +138,8 @@ public class AdminNode {
 			ObjectOutputStream out = null;
 			
 			try {
-				System.out.println("trying to create input stream on admin");
-				in = new ObjectInputStream(clientSocket.getInputStream());
-				System.out.println("trying to create output stream on admin");
 				out = new ObjectOutputStream(clientSocket.getOutputStream());
+				in = new ObjectInputStream(clientSocket.getInputStream());
 			} catch (IOException e) {
 				System.out.println("");
 				e.printStackTrace();
