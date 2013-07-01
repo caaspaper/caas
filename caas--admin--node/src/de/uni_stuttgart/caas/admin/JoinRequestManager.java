@@ -1,6 +1,7 @@
 package de.uni_stuttgart.caas.admin;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,6 +26,7 @@ public class JoinRequestManager {
 	public JoinRequestManager(int initialCapacity) {
 		assert initialCapacity > 0;
 		INITIAL_CAPACITY = initialCapacity;
+		joinRequests = new ArrayList<>(INITIAL_CAPACITY);
 	}
 
 	/**
