@@ -2,9 +2,9 @@ package de.uni_stuttgart.caas.messages;
 
 import java.io.Serializable;
 
-public interface IMessage {
+public interface IMessage extends Serializable{
 
-	public enum MessageType implements Serializable{
+	public enum MessageType {
 
 		/**
 		 * sent to admin node by a node wishing to join the grid. Empty
