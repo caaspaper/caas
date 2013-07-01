@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 
 import de.uni_stuttgart.caas.admin.AdminNode;
+import de.uni_stuttgart.caas.cache.CacheNode;
 
 public class TestGuiForm extends JFrame {
 
@@ -61,6 +62,15 @@ public class TestGuiForm extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching Admin Node");
+				Runnable r = new Runnable() {
+					
+					@Override
+					public void run() {
+						new AdminNode(DEFAULT_ADMIN_PORT, 1);
+					}
+				};
+				Thread t = new Thread(r);
+				t.start();
 			}
 		});
 		btn.setBounds(WIDTH - 250, 100, 200, 50);
@@ -101,6 +111,7 @@ public class TestGuiForm extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
 				System.out.println("Launching " + numNodesField.getValue()
 						+ " local nodes");
 				System.out.println("Assuming admin is running at "

@@ -209,7 +209,9 @@ public class CacheNode {
 			ObjectOutputStream out = null;
 
 			try {
+				System.out.println("trying to create inputstream in cachenode");
 				in = new ObjectInputStream(serverSocket.getInputStream());
+				System.out.println("trying to create outputstream in cachenode");
 				out = new ObjectOutputStream(serverSocket.getOutputStream());
 			} catch (IOException e) {
 				System.out

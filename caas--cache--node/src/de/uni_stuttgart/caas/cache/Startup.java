@@ -10,7 +10,7 @@ public class Startup {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		CacheNode n = new CacheNode(new InetSocketAddress("", 0));
+		CacheNode n = new CacheNode(new InetSocketAddress("localhost", 5007));
 	}
 
 }

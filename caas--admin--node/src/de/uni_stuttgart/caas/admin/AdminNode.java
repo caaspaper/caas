@@ -6,19 +6,13 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
-import delaunay.Knuth;
-import delaunay.Point;
-import delaunay.Segment;
 
 /**
  * AdminNode
@@ -144,7 +138,9 @@ public class AdminNode {
 			ObjectOutputStream out = null;
 			
 			try {
+				System.out.println("trying to create input stream on admin");
 				in = new ObjectInputStream(clientSocket.getInputStream());
+				System.out.println("trying to create output stream on admin");
 				out = new ObjectOutputStream(clientSocket.getOutputStream());
 			} catch (IOException e) {
 				System.out.println("");
