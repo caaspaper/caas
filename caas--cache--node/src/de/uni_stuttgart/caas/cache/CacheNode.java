@@ -57,7 +57,7 @@ public class CacheNode {
 					+ addr.getHostString());
 		}
 
-		System.out.println("connecting to " + addr.getAddress() + ":"
+		System.out.println("cache node: connecting to " + addr.getAddress() + ":"
 				+ addr.getPort());
 
 		try {
@@ -118,7 +118,9 @@ public class CacheNode {
 	public IMessage process(IMessage message) {
 
 		MessageType type = message.GetMessage();
-
+		
+		System.out.println("cache node: received: " + type);
+		
 		switch (currentState) {
 
 		case INITIAL_STATE:
@@ -231,6 +233,7 @@ public class CacheNode {
 
 					// as not to Confirm confirm messages
 					if (responce != null) {
+						System.out.println("cache-node responding with: " + responce.GetMessage());
 						out.writeObject(responce);
 					}
 				}

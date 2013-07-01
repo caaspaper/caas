@@ -111,11 +111,11 @@ public class TestGuiForm extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
 				System.out.println("Launching " + numNodesField.getValue()
 						+ " local nodes");
-				System.out.println("Assuming admin is running at "
-						+ ipAdminField.getValue());
+//				System.out.println("Assuming admin is running at "
+//						+ ipAdminField.getValue());
+				new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
 			}
 		});
 		btn.setBounds(WIDTH - 250, 300, 200, 50);
