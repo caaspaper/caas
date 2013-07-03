@@ -2,7 +2,10 @@ package de.uni_stuttgart.caas.admin;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.Vector;
 
 /**
  * Keeps track of a wait list of nodes wishing to join the grid during its
@@ -69,6 +72,19 @@ public class JoinRequestManager {
 
 			joinRequests.add(rq);
 		}
+	}
+	
+	public int getNumberOfConnectedNodes() {
+		return joinRequests.size();
+	}
+	
+	public Queue<InetSocketAddress> getAddressesOfConnectedNodes() {
+		
+		Queue addresses = new LinkedList<>();
+		for (JoinRequest r : joinRequests) {
+			addresses.add(r.ADDRESS);
+		}
+		return addresses;
 	}
 
 	public static class JoinRequest {
