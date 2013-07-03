@@ -91,7 +91,6 @@ public class AdminNode {
 			serverSocket = new ServerSocket(PORT_NUMBER);
 		} catch (IOException e) {
 			System.out.println("Could not listen on PORT_NUMBER");
-			System.exit(-1);
 		}
 
 		assert serverSocket != null;
@@ -156,7 +155,7 @@ public class AdminNode {
 					e.printStackTrace();
 				} catch (ClassCastException e) {
 					System.out.println("Cast of obj to type IMessage failed");
-					System.exit(-1);
+					e.printStackTrace();
 				} catch (IOException e) {
 					System.out.println("Read failed");
 					e.printStackTrace();
