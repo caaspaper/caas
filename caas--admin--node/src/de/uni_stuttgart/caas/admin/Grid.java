@@ -3,10 +3,13 @@ package de.uni_stuttgart.caas.admin;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
+import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import delaunay.DelaunayTriangulation;
 import delaunay.Knuth;
@@ -18,15 +21,27 @@ import delaunay.Segment;
  *
  */
 public class Grid {
+
 	/**
 	 * Provides access to triangulation
 	 */
-	public DelaunayTriangulation triangulation;
+	private DelaunayTriangulation triangulation;
 
 	/**
 	 * Set containing all connected Nodes
 	 */
-	public Map<InetSocketAddress, NodeInfo> connectedNodes;
+	private Map<InetSocketAddress, NodeInfo> connectedNodes;
+	
+	/**
+	 * bounds for the grid
+	 */
+	public static final int MAX_GRID_INDEX =  1000000;
+	public static final int MIN_GRID_INDEX = -1000000;
+	
+	/**
+	 * number of connections
+	 */
+	private int numOfConnectedNodes = 0;
 
 	/**
 	 * 
@@ -34,8 +49,12 @@ public class Grid {
 	 */
 	public Grid(JoinRequestManager joinRequests) {
 		assert joinRequests.IsComplete();
-		// TODO construct grid based on join requests
-
+		
+		numOfConnectedNodes = joinRequests.getNumberOfConnectedNodes();
+		connectedNodes = new HashMap<>(numOfConnectedNodes);
+		distributeCacheNodesOnGrid(joinRequests.getAddressesOfConnectedNodes());
+		
+		performNewTriangulation();
 	}
 
 	/**
@@ -43,8 +62,51 @@ public class Grid {
 	 * hashmap assigning them a location on the grid
 	 * 
 	 */
-	private void distributeCacheNodesOnGrid() {
-
+	private void distributeCacheNodesOnGrid(Queue<InetSocketAddress> addresses) {
+		
+		int numberOfNodesInOneLine = (int) Math.ceil(Math.sqrt(addresses.size()));
+		int distanceBetweenNodes = (MAX_GRID_INDEX - MIN_GRID_INDEX) / numberOfNodesInOneLine;
+		int x = MIN_GRID_INDEX, y = MIN_GRID_INDEX;
+		
+		InetSocketAddress currentAddress = null;
+		
+		// shell of grid
+		for (int j = 0; j < numberOfNodesInOneLine; j++) {
+			currentAddress = addresses.poll();
+			assert currentAddress != null : "my math should be correct....";
+			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, new LocationOfNode(x, y)));
+			x += distanceBetweenNodes;
+		}
+		for (int j = 0; j < numberOfNodesInOneLine; j++) {
+			currentAddress = addresses.poll();
+			assert currentAddress != null : "my math should be correct....";
+			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, new LocationOfNode(x, y)));
+			y += distanceBetweenNodes;
+		}
+		for (int j = 0; j < numberOfNodesInOneLine; j++) {
+			currentAddress = addresses.poll();
+			assert currentAddress != null : "my math should be correct....";
+			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, new LocationOfNode(x, y)));
+			x -= distanceBetweenNodes;
+		}
+		for (int j = 0; j < numberOfNodesInOneLine; j++) {
+			currentAddress = addresses.poll();
+			assert currentAddress != null : "my math should be correct....";
+			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, new LocationOfNode(x, y)));
+			y -= distanceBetweenNodes;
+		}
+		x += distanceBetweenNodes;
+		y += distanceBetweenNodes;
+		
+		// fill the rest
+		while ((currentAddress = addresses.poll()) != null) {
+			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, new LocationOfNode(x, y)));
+			x += distanceBetweenNodes;
+			if (x == MAX_GRID_INDEX) {
+				x = MIN_GRID_INDEX + distanceBetweenNodes;
+				y += distanceBetweenNodes;
+			}
+		}
 	}
 
 	/**
@@ -66,7 +128,7 @@ public class Grid {
 	 * @param p
 	 *            the point to add
 	 */
-	private void addNodeToTriangulation(Point p) {
+	public void addNodeToTriangulation(Point p) {
 		if (triangulation == null) {
 			triangulation = new Knuth();
 		}
@@ -75,6 +137,9 @@ public class Grid {
 	}
 
 	public Collection<NodeInfo> getNeighborInfo(InetSocketAddress addressOfNode) {
+		if (!triangulation.isUpdated()) {
+			triangulation.update();
+		}
 		Collection<Segment> segments = triangulation.getSegments();
 		Collection<NodeInfo> infoOnNeighbors = new ArrayList<>();
 		Point pointOfNode = connectedNodes.get(addressOfNode)
