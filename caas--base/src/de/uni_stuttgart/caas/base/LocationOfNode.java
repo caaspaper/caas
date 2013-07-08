@@ -1,8 +1,10 @@
 package de.uni_stuttgart.caas.base;
 
+import java.io.Serializable;
+
 import delaunay.Point;
 
-public class LocationOfNode implements Point {
+public class LocationOfNode implements Point, Serializable {
 
 	private double x;
 	private double y;
