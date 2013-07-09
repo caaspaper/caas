@@ -334,8 +334,14 @@ public class AdminNode {
 	private IMessage activateNode() {
 		return new ActivateNodeMessage();
 	}
-
+	
 	/**
-	 * TODO close connection
+	 * TODO Alex
+	 * Shut down all connected nodes and then shutdown admin
 	 */
+	public void shutDownSystem() {
+		
+	}
+	
+	
 }
