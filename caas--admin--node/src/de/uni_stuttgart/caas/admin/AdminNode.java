@@ -13,6 +13,7 @@ import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
+import de.uni_stuttgart.caas.messages.IMessage.MessageType;
 
 /**
  * AdminNode
@@ -40,8 +41,16 @@ public class AdminNode {
 	/** List of nodes requesting to join grid */
 	private JoinRequestManager joinRequests;
 
-	/** */
-	private Grid grid = null;
+	/** So that NodeConnector threads wait until grid is initialized */
+	private Object monitor = new Object();
+
+	/**
+	 * Only one thread should be able to initialize Grid.
+	 * 
+	 * @note Declared as volatile in order to ensure correctness of
+	 *       double-checked locking.
+	 */
+	private volatile Grid grid = null;
 
 	/**
 	 * 
@@ -91,6 +100,7 @@ public class AdminNode {
 			serverSocket = new ServerSocket(PORT_NUMBER);
 		} catch (IOException e) {
 			System.out.println("Could not listen on PORT_NUMBER");
+			e.printStackTrace();
 		}
 
 		assert serverSocket != null;
@@ -123,7 +133,7 @@ public class AdminNode {
 		 */
 		public NodeConnector(Socket cS) {
 			this.clientSocket = cS;
-			
+
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS
 					.getRemoteSocketAddress();
@@ -135,7 +145,7 @@ public class AdminNode {
 		public void run() {
 			ObjectInputStream in = null;
 			ObjectOutputStream out = null;
-			
+
 			try {
 				out = new ObjectOutputStream(clientSocket.getOutputStream());
 				in = new ObjectInputStream(clientSocket.getInputStream());
@@ -143,7 +153,7 @@ public class AdminNode {
 				System.out.println("");
 				e.printStackTrace();
 			}
-			
+
 			while (true) {
 				IMessage message = null;
 				try { // message, i.e. object, passed over connection
@@ -160,15 +170,47 @@ public class AdminNode {
 					System.out.println("Read failed");
 					e.printStackTrace();
 				}
-				
-				IMessage response = process(message, clientAddress);
-				if (response != null) { // TODO finish
+		
+				IMessage response = process(message, this.clientAddress);
+				if (response != null) {
 					try {
 						out.writeObject(response);
 					} catch (IOException e) {
 						System.out.println("Write to client failed");
 						e.printStackTrace();
 					}
+					
+				}
+				
+				if (message.GetMessage() != MessageType.JOIN) {
+					continue;
+				}	
+				
+				synchronized (monitor) {
+					while (state != AdminNodeState.GRID_RUNNING
+							|| !joinRequests.IsComplete()) {
+						// to avoid spurious wake ups
+						try {
+							monitor.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+
+					ensureGridInitialized();
+
+					// on other objects, will be an empty operation
+					// because nobody should be waiting.
+					monitor.notifyAll();
+				}
+				
+				assert state == AdminNodeState.GRID_RUNNING;
+				assert grid != null;
+				//now send back messages to cache nodes
+				try {
+					out.writeObject(addNodeToGrid(this.clientAddress));
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}
@@ -224,16 +266,43 @@ public class AdminNode {
 	}
 
 	/**
-	 * Generates a new AddToGridMessage
+	 * Called by the last thread that is added to joinRequest during initial
+	 * sign-up phase.
 	 * 
-	 * @return An AddToGridMessage containing information about neighboring
-	 *         nodes
+	 * @note
+	 * 
+	 */
+	private void ensureGridInitialized() {
+		if (state != AdminNodeState.GRID_RUNNING) {
+			assert grid == null;
+			grid = new Grid(joinRequests);
+			state = AdminNodeState.GRID_RUNNING;
+			// joinRequest is no longer needed
+			joinRequests = null;
+		}
+	}
+
+	/**
+	 * Adds its cache node to the grid. Queries grid for relevant information on
+	 * its node's neighbors.
+	 * 
+	 * @param addressOfNode
+	 *            Contains IP + port of the cache node that is to be added to
+	 *            grid
+	 * @return An AddToGridMessage containing information about nodes
+	 *         neighboring the cache node
+	 * 
+	 * @note This method is only called during the initialization of the grid.
+	 *       All other later nodes that want to join the grid will be handled
+	 *       directly by the grid's methods.
 	 * 
 	 */
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
+		grid.addNewNode(addressOfNode);
 
 		Collection<NodeInfo> infoOnNeighbors = grid
 				.getNeighborInfo(addressOfNode);
+
 		return new AddToGridMessage(infoOnNeighbors);
 	}
 
