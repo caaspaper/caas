@@ -30,7 +30,7 @@ public class AddToGridMessage implements IMessage{
 	}
 
 	@Override
-	public MessageType GetMessage() {
+	public MessageType getMessageType() {
 		return MessageType.ADD_TO_GRID;
 	}
 }

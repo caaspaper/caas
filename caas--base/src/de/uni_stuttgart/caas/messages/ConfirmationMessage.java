@@ -26,7 +26,7 @@ public class ConfirmationMessage implements IMessage {
 	
 
 	@Override
-	public MessageType GetMessage() {
+	public MessageType getMessageType() {
 		return MessageType.CONFIRM;
 	}
 }

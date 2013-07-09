@@ -117,7 +117,7 @@ public class CacheNode {
 
 	public IMessage process(IMessage message) {
 
-		MessageType type = message.GetMessage();
+		MessageType type = message.getMessageType();
 		
 		System.out.println("cache node: received: " + type);
 		

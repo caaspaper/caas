@@ -36,6 +36,6 @@ public interface IMessage extends Serializable{
 	 * 
 	 * @return The type of the message
 	 */
-	MessageType GetMessage();
+	MessageType getMessageType();
 
 }

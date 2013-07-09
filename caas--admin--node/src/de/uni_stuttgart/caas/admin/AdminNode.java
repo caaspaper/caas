@@ -191,7 +191,7 @@ public class AdminNode {
 					
 				}
 				
-				if (message.GetMessage() == MessageType.JOIN) {
+				if (message.getMessageType() == MessageType.JOIN) {
 					initGrid(out);
 				}	
 				
@@ -246,7 +246,7 @@ public class AdminNode {
 	 */
 	private IMessage process(IMessage message, InetSocketAddress clientAddress) {
 		IMessage response = null;
-		switch (message.GetMessage()) {
+		switch (message.getMessageType()) {
 		case CONFIRM:
 			break;
 
