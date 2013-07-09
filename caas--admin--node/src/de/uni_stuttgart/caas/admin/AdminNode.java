@@ -7,6 +7,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.concurrent.CountDownLatch;
+
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
@@ -48,9 +50,10 @@ public class AdminNode {
 	 * Only one thread should be able to initialize Grid.
 	 * 
 	 * @note Declared as volatile in order to ensure correctness of
-	 *       double-checked locking.
 	 */
-	private volatile Grid grid = null;
+	private Grid grid = null;
+	
+	private CountDownLatch activationCountDown;
 
 	/**
 	 * 
@@ -94,6 +97,7 @@ public class AdminNode {
 		}
 
 		joinRequests = new JoinRequestManager(initialCapacity);
+		activationCountDown = new CountDownLatch(initialCapacity);
 
 		ServerSocket serverSocket = null;
 		try {
@@ -138,6 +142,16 @@ public class AdminNode {
 			this.clientAddress = (InetSocketAddress) cS
 					.getRemoteSocketAddress();
 		}
+		
+		
+		private void writeToRemote(IMessage m, ObjectOutputStream out) {
+			try {
+				out.writeObject(m);
+			} catch (IOException e) {
+				System.out.println("error while sending to node");
+				e.printStackTrace();
+			}
+		}
 
 		/**
 		 * Threadstarter
@@ -173,48 +187,55 @@ public class AdminNode {
 		
 				IMessage response = process(message, this.clientAddress);
 				if (response != null) {
-					try {
-						out.writeObject(response);
-					} catch (IOException e) {
-						System.out.println("Write to client failed");
-						e.printStackTrace();
-					}
+					writeToRemote(response, out);
 					
 				}
 				
-				if (message.GetMessage() != MessageType.JOIN) {
-					continue;
+				if (message.GetMessage() == MessageType.JOIN) {
+					initGrid(out);
 				}	
 				
-				synchronized (monitor) {
-					while (state != AdminNodeState.GRID_RUNNING
-							|| !joinRequests.IsComplete()) {
-						// to avoid spurious wake ups
-						try {
-							monitor.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-
-					ensureGridInitialized();
-
-					// on other objects, will be an empty operation
-					// because nobody should be waiting.
-					monitor.notifyAll();
-				}
-				
-				assert state == AdminNodeState.GRID_RUNNING;
-				assert grid != null;
-				//now send back messages to cache nodes
-				try {
-					out.writeObject(addNodeToGrid(this.clientAddress));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
 			}
 		}
+		
+		
+		private void initGrid(ObjectOutputStream out) {
+			synchronized (monitor) {
+				while (joinRequests != null && !joinRequests.IsComplete()) {
+					// to avoid spurious wake ups
+					try {
+						monitor.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				ensureGridInitialized();
+
+				// on other objects, will be an empty operation
+				// because nobody should be waiting.
+				monitor.notifyAll();
+			}
+			
+			assert state == AdminNodeState.GRID_RUNNING;
+			assert grid != null;
+			//now send back messages to cache nodes
+			writeToRemote(addNodeToGrid(this.clientAddress), out);
+			
+			activationCountDown.countDown();
+			
+			
+			try {
+				activationCountDown.await();
+			} catch (InterruptedException e) {
+				System.out.println("interrupted while waiting to activate node, not responding");
+				e.printStackTrace();
+			}
+			
+			writeToRemote(new ActivateNodeMessage(), out);
+		}
 	}
+	
 
 	/**
 	 * 
@@ -298,8 +319,7 @@ public class AdminNode {
 	 * 
 	 */
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
-		grid.addNewNode(addressOfNode);
-
+		
 		Collection<NodeInfo> infoOnNeighbors = grid
 				.getNeighborInfo(addressOfNode);
 
