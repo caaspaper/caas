@@ -62,11 +62,13 @@ public class TestGuiForm extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching Admin Node");
+				
 				Runnable r = new Runnable() {
 					
 					@Override
 					public void run() {
-						new AdminNode(DEFAULT_ADMIN_PORT, 1);
+						int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+						new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
 					}
 				};
 				Thread t = new Thread(r);
@@ -113,9 +115,10 @@ public class TestGuiForm extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching " + numNodesField.getValue()
 						+ " local nodes");
-//				System.out.println("Assuming admin is running at "
-//						+ ipAdminField.getValue());
-				new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				for (int i = 0; i < numOfNodes; i++) {
+					new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+				}
 			}
 		});
 		btn.setBounds(WIDTH - 250, 300, 200, 50);
