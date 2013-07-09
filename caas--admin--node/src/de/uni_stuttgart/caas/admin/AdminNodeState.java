@@ -5,9 +5,9 @@ public enum AdminNodeState {
 
 	/** The admin node is waiting until all nodes have signed up. */
 	INITIAL_SIGNUP_PHASE,
-
-	/** Cache grid is build and running */
-	RUNNING, 
+	
+	/** Grid has been initialized. */
+	GRID_RUNNING, 
 	
 	/** Admin node is notifying individual nodes in grid of shutdown */
 	SHUTDOWN,
