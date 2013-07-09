@@ -233,7 +233,6 @@ public class CacheNode {
 
 					// as not to Confirm confirm messages
 					if (responce != null) {
-						System.out.println("cache-node responding with: " + responce.GetMessage());
 						out.writeObject(responce);
 					}
 				}
