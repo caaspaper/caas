@@ -1,3 +1,5 @@
+package de.uni_stuttgart.caas.testgui;
+
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
@@ -11,30 +13,27 @@ import java.awt.GridBagConstraints;
 import java.awt.Insets;
 import java.awt.FlowLayout;
 import java.text.NumberFormat;
-
-import javax.swing.JTextField;
+import java.util.regex.Pattern;
 import javax.swing.JTextArea;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
-
 import de.uni_stuttgart.caas.admin.AdminNode;
+import de.uni_stuttgart.caas.cache.CacheNode;
 import de.uni_stuttgart.caas.testgui.ImprovedFormattedTextField;
+import de.uni_stuttgart.caas.testgui.RegexFormatter;
 
 public class MainWindow {
 
+	private JFrame frame;
+	
 	private final short DEFAULT_ADMIN_PORT = AdminNode.DEFAULT_PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
-
 	private final int DEFAULT_CAPACITY = AdminNode.DEFAULT_INITIAL_CAPACITY;
 	
-	
-	private JFrame frame;
-	private JTextField addressOfAdmin;
-	private JTextField numOfNodesConnecting;
-	private JTextField textField_2;
-	private JTextField textField_3;
-	
-	ImprovedFormattedTextField numNodesField;
+	private ImprovedFormattedTextField numNodesField;
+	private ImprovedFormattedTextField adminCapacityField;
+	private ImprovedFormattedTextField adminPortField;
+	private ImprovedFormattedTextField addressOfAdminField;
 	
 
 	/**
@@ -130,65 +129,52 @@ public class MainWindow {
 		JPanel adminPanel = new JPanel();
 		adminPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
-		JLabel lblIpAndPort = new JLabel("ip and port of admin");
+		JLabel lblIpAndPort = new JLabel("port of admin");
 		adminPanel.add(lblIpAndPort);
 
-		addressOfAdmin = new JTextField();
-		adminPanel.add(addressOfAdmin);
-		addressOfAdmin.setColumns(10);
-
-		JLabel lblNumberOfNodes = new JLabel("Number of nodes Connecting");
-		adminPanel.add(lblNumberOfNodes);
-		
 		NumberFormat intFormat = NumberFormat.getIntegerInstance();
 		intFormat.setGroupingUsed(false);
 
-		numNodesField = new ImprovedFormattedTextField(intFormat, DEFAULT_ADMIN_PORT);
-		adminPanel.add(numNodesField);
-		numNodesField.setColumns(6);
-
-		JButton adminButton = new JButton("startAdmin");
+		adminPortField = new ImprovedFormattedTextField(intFormat, DEFAULT_ADMIN_PORT);
+		adminPortField.setColumns(6);
+		adminPanel.add(adminPortField);
 		
-		adminButton.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-		});
 		
-		adminPanel.add(adminButton);
-
+		JLabel lblNumberOfNodes = new JLabel("Number of nodes Connecting");
+		adminPanel.add(lblNumberOfNodes);
+		
+		adminCapacityField = new ImprovedFormattedTextField(intFormat, DEFAULT_CAPACITY);
+		adminCapacityField.setColumns(10);
+		adminPanel.add(adminCapacityField);
+		
 		return adminPanel;
 	}
 
 	private JPanel createCacheNodePanel() {
 
 		JPanel cacheNodePanel = new JPanel();
-		textField_2 = new JTextField();
-		cacheNodePanel.add(textField_2);
-		textField_2.setColumns(10);
+		
+		JLabel lblAddressOfAdmin = new JLabel("Address of admin node");
+		cacheNodePanel.add(lblAddressOfAdmin);
+		addressOfAdminField = new ImprovedFormattedTextField(new RegexFormatter(
+				Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
+		addressOfAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);		
+		addressOfAdminField.setColumns(20);
+		cacheNodePanel.add(addressOfAdminField);
 
 		JLabel lblNumberOfCache = new JLabel("Number of Cache nodes to start");
 		cacheNodePanel.add(lblNumberOfCache);
-
-		textField_3 = new JTextField();
-		cacheNodePanel.add(textField_3);
-		textField_3.setColumns(10);
-
-		JButton cacheNodeButton = new JButton("start cacheNodes");
 		
-		cacheNodeButton.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
-				
-			}
-		});
-		
-		cacheNodePanel.add(cacheNodeButton);
+		NumberFormat intFormat = NumberFormat.getIntegerInstance();
+		intFormat.setGroupingUsed(false);
+
+		numNodesField = new ImprovedFormattedTextField(intFormat, DEFAULT_CAPACITY);
+		numNodesField.setColumns(10);
+
+		cacheNodePanel.add(numNodesField);
 
 		return cacheNodePanel;
 	}
@@ -202,18 +188,42 @@ public class MainWindow {
 		gbl_runTimeCommands.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		runTimeCommands.setLayout(gbl_runTimeCommands);
 
-		JButton btnNewButton = new JButton("New button");
+		JButton btnNewButton = new JButton("Start admin");
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
 		gbc_btnNewButton.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton.gridx = 0;
 		gbc_btnNewButton.gridy = 0;
+		
+		btnNewButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText()
+						+ "listening on port number" + adminPortField.getText());
+				
+				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+			}
+		});
 		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
 
-		JButton btnNewButton_2 = new JButton("New button");
+		JButton btnNewButton_2 = new JButton("Start cache nodes");
 		GridBagConstraints gbc_btnNewButton_2 = new GridBagConstraints();
 		gbc_btnNewButton_2.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_2.gridx = 0;
 		gbc_btnNewButton_2.gridy = 1;
+		btnNewButton_2.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				System.out.println("Launching " + numNodesField.getValue()
+						+ " local nodes");
+				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				for (int i = 0; i < numOfNodes; i++) {
+					new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+				}
+			}
+		});
 		runTimeCommands.add(btnNewButton_2, gbc_btnNewButton_2);
 
 		JButton btnNewButton_3 = new JButton("New button");
