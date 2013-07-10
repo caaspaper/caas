@@ -3,13 +3,23 @@ package de.uni_stuttgart.caas.admin;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
+import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
@@ -47,12 +57,11 @@ public class AdminNode {
 	private Object monitor = new Object();
 
 	/**
-	 * Only one thread should be able to initialize Grid.
-	 * 
-	 * @note Declared as volatile in order to ensure correctness of
+	 * The grid of nodes, created after all join requests are in. Only one
+	 * thread should be able to initialize Grid.
 	 */
 	private Grid grid = null;
-	
+
 	private CountDownLatch activationCountDown;
 
 	/**
@@ -113,8 +122,8 @@ public class AdminNode {
 			try {
 				Socket clientSocket = serverSocket.accept();
 				NodeConnector nc = new NodeConnector(clientSocket);
-				Thread t = new Thread(nc);
-				t.start();
+
+				// TODO: NodeConnector shutdown
 			} catch (IOException e) {
 				System.out.println("Accept failed: PORT_NUMBER");
 				e.printStackTrace();
@@ -127,140 +136,84 @@ public class AdminNode {
 	 * 
 	 *
 	 */
-	private class NodeConnector implements Runnable {
-		private final Socket clientSocket;
+	private class NodeConnector extends FullDuplexMPI {
 		private final InetSocketAddress clientAddress;
 
 		/**
 		 * 
 		 * @param cS
+		 * @throws IOException
 		 */
-		public NodeConnector(Socket cS) {
-			this.clientSocket = cS;
+		public NodeConnector(Socket cS) throws IOException {
+			super(cS);
 
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
-			this.clientAddress = (InetSocketAddress) cS
-					.getRemoteSocketAddress();
-		}
-		
-		
-		private void writeToRemote(IMessage m, ObjectOutputStream out) {
-			try {
-				out.writeObject(m);
-			} catch (IOException e) {
-				System.out.println("error while sending to node");
-				e.printStackTrace();
-			}
+			this.clientAddress = (InetSocketAddress) cS.getRemoteSocketAddress();
 		}
 
-		/**
-		 * Threadstarter
-		 */
-		public void run() {
-			ObjectInputStream in = null;
-			ObjectOutputStream out = null;
+		@Override
+		public IMessage processIncomingMessage(IMessage message) {
+			switch (message.getMessageType()) {
+			case CONFIRM:
+				break;
 
-			try {
-				out = new ObjectOutputStream(clientSocket.getOutputStream());
-				in = new ObjectInputStream(clientSocket.getInputStream());
-			} catch (IOException e) {
-				System.out.println("");
-				e.printStackTrace();
-			}
+			case JOIN:
+				JoinRequest jr = new JoinRequest(clientAddress);
+				assert jr != null;
+				final ConfirmationMessage response = respondToJoinRequest(jr);
 
-			while (true) {
-				IMessage message = null;
-				try { // message, i.e. object, passed over connection
-					message = (IMessage) in.readObject(); // casts to one of the
-															// types enumerated
-															// in IMessage
-				} catch (ClassNotFoundException e) {
-					System.out.println("Object class not found");
-					e.printStackTrace();
-				} catch (ClassCastException e) {
-					System.out.println("Cast of obj to type IMessage failed");
-					e.printStackTrace();
-				} catch (IOException e) {
-					System.out.println("Read failed");
-					e.printStackTrace();
+				if (response.STATUS_CODE == 0) {
+					// fire off grid construction in a separate thread to have
+					// the
+					// message pump stay responsive.
+					new Thread(new InitGridHelper()).start();
 				}
-		
-				IMessage response = process(message, this.clientAddress);
-				if (response != null) {
-					writeToRemote(response, out);
-					
-				}
-				
-				if (message.getMessageType() == MessageType.JOIN) {
-					initGrid(out);
-				}	
-				
+				return response;
+
+			default:
+				break;
 			}
+
+			return new ConfirmationMessage(-3, "unexpected message type: " + message.getMessageType().toString());
 		}
-		
-		
-		private void initGrid(ObjectOutputStream out) {
-			synchronized (monitor) {
-				while (joinRequests != null && !joinRequests.IsComplete()) {
-					// to avoid spurious wake ups
-					try {
-						monitor.wait();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+
+		private class InitGridHelper implements Runnable {
+			@Override
+			public void run() {
+				synchronized (monitor) {
+					while (joinRequests != null && !joinRequests.IsComplete()) {
+						// to avoid spurious wake ups
+						try {
+							monitor.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
+
+					ensureGridInitialized();
+
+					// on other objects, will be an empty operation
+					// because nobody should be waiting.
+					monitor.notifyAll();
 				}
 
-				ensureGridInitialized();
+				assert state == AdminNodeState.GRID_RUNNING;
+				assert grid != null;
+				// now send back messages to cache nodes
+				sendMessageAsync(addNodeToGrid(clientAddress));
 
-				// on other objects, will be an empty operation
-				// because nobody should be waiting.
-				monitor.notifyAll();
+				activationCountDown.countDown();
+
+				try {
+					activationCountDown.await();
+				} catch (InterruptedException e) {
+					System.out.println("interrupted while waiting to activate node, not responding");
+					e.printStackTrace();
+				}
+
+				sendMessageAsync(activateNode());
 			}
-			
-			assert state == AdminNodeState.GRID_RUNNING;
-			assert grid != null;
-			//now send back messages to cache nodes
-			writeToRemote(addNodeToGrid(this.clientAddress), out);
-			
-			activationCountDown.countDown();
-			
-			
-			try {
-				activationCountDown.await();
-			} catch (InterruptedException e) {
-				System.out.println("interrupted while waiting to activate node, not responding");
-				e.printStackTrace();
-			}
-			
-			writeToRemote(new ActivateNodeMessage(), out);
 		}
-	}
-	
-
-	/**
-	 * 
-	 * @param message
-	 * @param clientAddress
-	 * @return
-	 * @note
-	 */
-	private IMessage process(IMessage message, InetSocketAddress clientAddress) {
-		IMessage response = null;
-		switch (message.getMessageType()) {
-		case CONFIRM:
-			break;
-
-		case JOIN:
-			JoinRequest jr = new JoinRequest(clientAddress);
-			assert jr != null;
-			response = respondToJoinRequest(jr);
-			return response;
-
-		default:
-			break;
-		}
-
-		return null;
 	}
 
 	/**
@@ -274,13 +227,19 @@ public class AdminNode {
 	 * @note sc refers to status code of join request success. If node was added
 	 *       to JoinRequest List, then sc = 0. Otherwise, sc is non-null.
 	 */
-	private IMessage respondToJoinRequest(JoinRequest request) {
+	private ConfirmationMessage respondToJoinRequest(JoinRequest request) {
+		if (joinRequests == null) {
+			return new ConfirmationMessage(-2, "not in startup phase, no more join requests accepted");
+		}
+
 		int sc = 0;
 		String m = null; // optional, may stay null
+
 		try {
 			joinRequests.TryAdd(request);
 		} catch (IllegalStateException e) {
 			sc = -1;
+			m = "initial grid capacity exchausted";
 		}
 		ConfirmationMessage cm = new ConfirmationMessage(sc, m);
 		return cm;
@@ -319,9 +278,8 @@ public class AdminNode {
 	 * 
 	 */
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
-		
-		Collection<NodeInfo> infoOnNeighbors = grid
-				.getNeighborInfo(addressOfNode);
+
+		Collection<NodeInfo> infoOnNeighbors = grid.getNeighborInfo(addressOfNode);
 
 		return new AddToGridMessage(infoOnNeighbors);
 	}
@@ -334,14 +292,12 @@ public class AdminNode {
 	private IMessage activateNode() {
 		return new ActivateNodeMessage();
 	}
-	
+
 	/**
-	 * TODO Alex
-	 * Shut down all connected nodes and then shutdown admin
+	 * TODO Alex Shut down all connected nodes and then shutdown admin
 	 */
 	public void shutDownSystem() {
-		
+
 	}
-	
-	
+
 }

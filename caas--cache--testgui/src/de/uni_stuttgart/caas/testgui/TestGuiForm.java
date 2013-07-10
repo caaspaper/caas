@@ -117,7 +117,11 @@ public class TestGuiForm extends JFrame {
 						+ " local nodes");
 				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
-					new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+					try {
+						new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
 		});
