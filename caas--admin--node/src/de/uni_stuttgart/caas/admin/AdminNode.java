@@ -1,23 +1,11 @@
 package de.uni_stuttgart.caas.admin;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -25,7 +13,6 @@ import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
-import de.uni_stuttgart.caas.messages.IMessage.MessageType;
 
 /**
  * AdminNode
