@@ -132,7 +132,7 @@ public class AdminNode {
 		 * @throws IOException
 		 */
 		public NodeConnector(Socket cS) throws IOException {
-			super(cS);
+			super(cS, System.out);
 
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS.getRemoteSocketAddress();

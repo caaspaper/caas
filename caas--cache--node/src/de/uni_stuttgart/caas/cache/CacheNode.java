@@ -201,7 +201,7 @@ public class CacheNode {
 		 *             if the Socket can't be created, pass the error up
 		 */
 		public AdminConnector(InetSocketAddress address) throws IOException {
-			super(new Socket(address.getAddress(), address.getPort()));
+			super(new Socket(address.getAddress(), address.getPort()), System.out);
 		}
 
 
