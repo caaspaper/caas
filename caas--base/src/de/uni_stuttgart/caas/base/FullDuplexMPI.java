@@ -181,14 +181,32 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 *            Closure that receives a callback upon receiving the message
 	 *            response. May be null, in which case the response is thrown
 	 *            away (but the MPI interface nevertheless expects a response).
-	 * @throws InterruptedException 
+	 * @note If you expect to be interrupted, call isInterrupted() on the thread
+	 *       afterwards as interrupts are swallowed by this method.
 	 */
-	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse)  {
+	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse) {
 		assert message != null;
-		try {
-			writeQueue.put(new OutgoingMessage(message, futureResponse));
-		} catch (InterruptedException e) {
-			// TODO:
+		while (true) {
+			try {
+				writeQueue.put(new OutgoingMessage(message, futureResponse));
+			} catch (InterruptedException e) {
+				// put() internally does not wait for long, so nobody will
+				// intentionally interrupt() on the calling thread during
+				// _this_ time. Therefore, any code expecting to receive
+				// interrupts in general will not rely on us bubbling the
+				// exception up, so we can swallow it.
+
+				// A special case is, however, if sendMessageAsync() is called
+				// from IResponseHandler or from within
+				// processIncomingMessage() implementation.
+				//
+				// In such a case, an interrupt() received here could be an
+				// interrupt() send to our reader and writer threads as a
+				// signal to shutdown. We do not want to lose this interrupt.
+
+				// Therefore, calls to user code have to check afterwards if
+				// threads were interrupted to rule out this case!
+			}
 		}
 	}
 
@@ -298,6 +316,10 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 						// there is no entry for this message, so it is not a
 						// response to a previous message
 						final IMessage response = processIncomingMessage(envelope.message);
+						if (Thread.currentThread().isInterrupted()) {
+							// see note in sendMessageAsync()
+							throw new InterruptedException();
+						}
 						assert response != null;
 
 						writeResponseAsync(response, envelope.uid);
@@ -308,6 +330,10 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 					assert message.expectResponse;
 					if (message.handler != null && !isShuttingDown) {
 						message.handler.onResponseReceived(envelope.message);
+						if (Thread.currentThread().isInterrupted()) {
+							// see note in sendMessageAsync()
+							throw new InterruptedException();
+						}
 					}
 
 					pendingSentMessages.remove((Integer) envelope.uid);
