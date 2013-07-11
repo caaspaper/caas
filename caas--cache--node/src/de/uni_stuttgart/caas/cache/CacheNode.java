@@ -53,12 +53,11 @@ public class CacheNode {
 	 */
 	public CacheNode(InetSocketAddress addr) {
 		if (addr.isUnresolved()) {
-			throw new IllegalArgumentException("unresolved host: "
-					+ addr.getHostString());
+			throw new IllegalArgumentException("unresolved host: " + addr.getHostString());
 		}
 
-		System.out.println("cache node: connecting to " + addr.getAddress() + ":"
-				+ addr.getPort());
+		// System.out.println("cache node: connecting to " + addr.getAddress() +
+		// ":" + addr.getPort());
 
 		try {
 			connectionToAdmin = new Thread(new AdminConnector(addr));
@@ -118,9 +117,9 @@ public class CacheNode {
 	public IMessage process(IMessage message) {
 
 		MessageType type = message.getMessageType();
-		
+
 		System.out.println("cache node: received: " + type);
-		
+
 		switch (currentState) {
 
 		case INITIAL_STATE:
@@ -135,8 +134,7 @@ public class CacheNode {
 			if (type != MessageType.ADD_TO_GRID) {
 				System.out.println("Error in Protocol");
 			}
-			addNeighboringNodes(((AddToGridMessage) message)
-					.getNeighboringNodes());
+			addNeighboringNodes(((AddToGridMessage) message).getNeighboringNodes());
 			currentState = CacheNodeState.AWAITING_ACTIVATION;
 			return new ConfirmationMessage(0, "Added neighbors");
 
@@ -210,8 +208,7 @@ public class CacheNode {
 				out = new ObjectOutputStream(serverSocket.getOutputStream());
 				in = new ObjectInputStream(serverSocket.getInputStream());
 			} catch (IOException e) {
-				System.out
-						.println("Could not initiate input and output with server");
+				System.out.println("Could not initiate input and output with server");
 			}
 
 			try {
@@ -243,8 +240,13 @@ public class CacheNode {
 		}
 
 	}
-	
-	
+
+	/**
+	 * For starting the cacheNode from the command line
+	 * 
+	 * @param args
+	 *            the ip address of the admin and the port, the admin is listening on
+	 */
 	public static void main(String[] args) {
 		if (args.length != 2) {
 			throw new IllegalArgumentException("please provide the host and the port of the admin node");
