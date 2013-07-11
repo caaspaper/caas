@@ -1,6 +1,7 @@
 package de.uni_stuttgart.caas.base;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -33,7 +34,7 @@ import de.uni_stuttgart.caas.messages.IMessage;
  * lockless, and should therefore scale well.
  * 
  */
-public abstract class FullDuplexMPI {
+public abstract class FullDuplexMPI /* implements AutoCloseable */{
 
 	// ---------------------------------
 	// Public API
@@ -69,7 +70,8 @@ public abstract class FullDuplexMPI {
 	 * endpoints.
 	 * 
 	 * @param socket
-	 *            non-null Socket instance representing a connected socket.
+	 *            non-null Socket instance representing a connected socket. The
+	 *            created object takes ownership of the socket.
 	 * @throws IOException
 	 *             upon failure to setup the full duplex connection.
 	 */
@@ -97,6 +99,33 @@ public abstract class FullDuplexMPI {
 		} catch (IOException e) {
 			throw new IOException("FullDuplexMPI: failed to start reader thread", e);
 		}
+	}
+
+	/**
+	 * Close the connection and relinquish all resources to the operating
+	 * system. This includes closing the socket.
+	 * 
+	 * All pending response handlers are discarded.
+	 * 
+	 * Calling close() on an already-closed instance is undefined behaviour.
+	 */
+	public void close() {
+		assert !isShuttingDown;
+
+		isShuttingDown = true;
+		reader.interrupt();
+		writer.interrupt();
+
+		try {
+			clientSocket.close();
+		} catch (IOException e) {
+			// TODO: get rid of stack traces
+			e.printStackTrace();
+		}
+
+		// free up references on the thread to make the object streams contained
+		// therein accessible to garbage collection.
+		reader = writer = null;
 	}
 
 	/**
@@ -224,11 +253,17 @@ public abstract class FullDuplexMPI {
 
 	}
 
-	private final Thread reader, writer;
+	private Thread reader, writer;
 
 	private final BlockingQueue<OutgoingMessage> writeQueue;
 	private final ConcurrentHashMap<Integer, OutgoingMessage> pendingSentMessages;
 	private final Socket clientSocket;
+
+	// note: we need volatile here as the value is written from one thread, but
+	// concurrently read from others. Without volatile, the thread receiving
+	// the signal to shutdown may not see updates made to this variable by
+	// the thread who triggered the shutdown.
+	private volatile boolean isShuttingDown = false;
 
 	private class ReaderThread implements Runnable {
 
@@ -243,56 +278,67 @@ public abstract class FullDuplexMPI {
 			assert in != null;
 
 			while (true) {
-				final MessageEnvelope envelope = readMessageEnvelope();
-				final OutgoingMessage message = pendingSentMessages.get((Integer) envelope.uid);
-				if (message == null) {
-					// there is no entry for this message, so it is not a
-					// response to a previous message
-					final IMessage response = processIncomingMessage(envelope.message);
-					assert response != null;
+				try {
 
-					writeResponseAsync(response, envelope.uid);
-					continue;
+					final MessageEnvelope envelope = readMessageEnvelope();
+					final OutgoingMessage message = pendingSentMessages.get((Integer) envelope.uid);
+					if (message == null) {
+						// there is no entry for this message, so it is not a
+						// response to a previous message
+						final IMessage response = processIncomingMessage(envelope.message);
+						assert response != null;
+
+						writeResponseAsync(response, envelope.uid);
+						continue;
+					}
+
+					// there exists an entry
+					assert message.expectResponse;
+					if (message.handler != null && !isShuttingDown) {
+						message.handler.onResponseReceived(envelope.message);
+					}
+
+					pendingSentMessages.remove((Integer) envelope.uid);
+
+				} catch (InterruptedException e) {
+					// interrupt() should only happen during shutdown
+					assert isShuttingDown;
 				}
-
-				// there exists an entry
-				assert message.expectResponse;
-				if (message.handler != null) {
-					message.handler.onResponseReceived(envelope.message);
-				}
-
-				pendingSentMessages.remove((Integer) envelope.uid);
 			}
 		}
 
-		private void writeResponseAsync(IMessage response, int uid) {
+		private void writeResponseAsync(IMessage response, int uid) throws InterruptedException {
 			assert response != null;
-			try {
-				writeQueue.put(new OutgoingMessage(response, null, uid, false));
-			} catch (InterruptedException e) {
-				// unreachable - as the thread is encapsulated, there is nobody
-				// who could call interrupt() on it.
-				e.printStackTrace();
-				assert false;
-			}
+			writeQueue.put(new OutgoingMessage(response, null, uid, false));
 		}
 
-		private MessageEnvelope readMessageEnvelope() {
+		private MessageEnvelope readMessageEnvelope() throws InterruptedException {
 			try { // message, i.e. object, passed over connection, wrapped in
 					// our envelope
 				return (MessageEnvelope) in.readObject(); //
+			}
 
+			catch (InterruptedIOException e) {
+				// unlike IOException, InterruptedIOException is expected during
+				// shutdown of the connection.
+				assert isShuttingDown;
+				throw new InterruptedException();
+
+				// these two happen if the other party is not a FullDuplexMPI
+				// instance of the same version.
 			} catch (ClassNotFoundException e) {
 				System.out.println("Object class not found");
 				e.printStackTrace();
 			} catch (ClassCastException e) {
 				System.out.println("Cast of obj to type IMessage failed");
 				e.printStackTrace();
+
 			} catch (IOException e) {
-				System.out.println("Read failed");
+				// connection loss or otherwise fatal failure, as per se we
+				// do not handle this further.
 				e.printStackTrace();
 			}
-			// TODO: error handling
+			assert false;
 			return null;
 		}
 	}
@@ -326,10 +372,8 @@ public abstract class FullDuplexMPI {
 					writeMessageEnvelope(new MessageEnvelope(msg.message, msg.uid));
 
 				} catch (InterruptedException e) {
-					// unreachable - as the thread is encapsulated, there is
-					// nobody who could call interrupt() on it.
-					e.printStackTrace();
-					assert false;
+					// interrupt() should only happen during shutdown
+					assert isShuttingDown;
 				}
 			}
 		}
@@ -339,9 +383,12 @@ public abstract class FullDuplexMPI {
 			assert envelope != null;
 			try {
 				out.writeObject(envelope);
+
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				// connection loss or otherwise fatal failure, as per se we
+				// do not handle this further
 				e.printStackTrace();
+				assert false;
 			}
 		}
 	}
