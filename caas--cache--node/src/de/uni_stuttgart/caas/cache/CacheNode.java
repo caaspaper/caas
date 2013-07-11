@@ -43,7 +43,7 @@ public class CacheNode {
 	/**
 	 * Holds the connection to the admin node
 	 */
-	private final AdminConnector connectionToAdmin;
+	private AdminConnector connectionToAdmin;
 
 	/**
 	 * Construct a new cache node given the address of the admin node
@@ -171,9 +171,9 @@ public class CacheNode {
 	 * Used to stop an active cache node
 	 */
 	public void stopNode() {
-		assert false;
-		// TODO: FullDuplexMPI doesnt support proper shutdown yet
-		//connectionToAdmin.interrupt();
+		connectionToAdmin.close();
+		// free up the reference
+		connectionToAdmin = null;
 	}
 
 	/**
