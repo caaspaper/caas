@@ -1,13 +1,10 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.TreeSet;
-
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -74,7 +71,7 @@ public class CacheNode {
 			
 			@Override
 			public void onResponseReceived(IMessage response) {
-				// TODO: error handling
+				process(response);
 			}
 		});
 	}
