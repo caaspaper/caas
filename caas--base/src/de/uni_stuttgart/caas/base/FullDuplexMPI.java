@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
@@ -72,12 +73,19 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 * @param socket
 	 *            non-null Socket instance representing a connected socket. The
 	 *            created object takes ownership of the socket.
+	 * @param errorOutStream
+	 *            non-null PrintStream instance that receives any error messages
+	 *            or exception stack traces that occur during operation of the
+	 *            FullDuplexMPI instance.
 	 * @throws IOException
 	 *             upon failure to setup the full duplex connection.
 	 */
-	public FullDuplexMPI(Socket socket) throws IOException {
+	public FullDuplexMPI(Socket socket, PrintStream errorOutStream) throws IOException {
 		assert socket != null;
+		assert errorOutStream != null;
+
 		clientSocket = socket;
+		outStream = errorOutStream;
 
 		writeQueue = new LinkedBlockingQueue<OutgoingMessage>();
 		pendingSentMessages = new ConcurrentHashMap<Integer, OutgoingMessage>();
@@ -91,13 +99,13 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 		try {
 			(writer = new Thread(new WriterThread())).start();
 		} catch (IOException e) {
-			throw new IOException("FullDuplexMPI: failed to start writer thread", e);
+			throw new IOException("(FullDuplexMPI) failed to start writer thread", e);
 		}
 
 		try {
 			(reader = new Thread(new ReaderThread())).start();
 		} catch (IOException e) {
-			throw new IOException("FullDuplexMPI: failed to start reader thread", e);
+			throw new IOException("(FullDuplexMPI) failed to start reader thread", e);
 		}
 	}
 
@@ -119,8 +127,8 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 		try {
 			clientSocket.close();
 		} catch (IOException e) {
-			// TODO: get rid of stack traces
-			e.printStackTrace();
+			outStream.println("(FullDuplexMPI) Exception during socket shutdown, ignoring");
+			e.printStackTrace(outStream);
 		}
 
 		// free up references on the thread to make the object streams contained
@@ -173,17 +181,14 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 *            Closure that receives a callback upon receiving the message
 	 *            response. May be null, in which case the response is thrown
 	 *            away (but the MPI interface nevertheless expects a response).
+	 * @throws InterruptedException 
 	 */
-	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse) {
+	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse)  {
 		assert message != null;
-
 		try {
 			writeQueue.put(new OutgoingMessage(message, futureResponse));
 		} catch (InterruptedException e) {
-			// unreachable - as the thread is encapsulated, there is nobody
-			// who could call interrupt() on it.
-			e.printStackTrace();
-			assert false;
+			// TODO:
 		}
 	}
 
@@ -257,7 +262,14 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 
 	private final BlockingQueue<OutgoingMessage> writeQueue;
 	private final ConcurrentHashMap<Integer, OutgoingMessage> pendingSentMessages;
+
 	private final Socket clientSocket;
+
+	/**
+	 * Injected PrintStream to receive any error messages that would otherwise
+	 * go to System.(out|err).println
+	 */
+	private final PrintStream outStream;
 
 	// note: we need volatile here as the value is written from one thread, but
 	// concurrently read from others. Without volatile, the thread receiving
@@ -327,16 +339,20 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 				// these two happen if the other party is not a FullDuplexMPI
 				// instance of the same version.
 			} catch (ClassNotFoundException e) {
-				System.out.println("Object class not found");
-				e.printStackTrace();
+				outStream.println("(FullDuplexMPI) Protocol: class not known to VM, expected MessageEnvelope");
+				outStream.println(e.getMessage());
+				e.printStackTrace(outStream);
+
 			} catch (ClassCastException e) {
-				System.out.println("Cast of obj to type IMessage failed");
-				e.printStackTrace();
+				outStream.println("(FullDuplexMPI) Protocol: wrong class type, expected MessageEnvelope");
+				outStream.println(e.getMessage());
+				e.printStackTrace(outStream);
 
 			} catch (IOException e) {
-				// connection loss or otherwise fatal failure, as per se we
-				// do not handle this further.
-				e.printStackTrace();
+				// connection loss or otherwise fatal failure
+				outStream.println("(FullDuplexMPI) Failure reading object, connection lost or other network failure");
+				outStream.println(e.getMessage());
+				e.printStackTrace(outStream);
 			}
 			assert false;
 			return null;
@@ -387,7 +403,9 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 			} catch (IOException e) {
 				// connection loss or otherwise fatal failure, as per se we
 				// do not handle this further
-				e.printStackTrace();
+				outStream.println("(FullDuplexMPI) Failure writing object, connection lost or other network failure");
+				outStream.println(e.getMessage());
+				e.printStackTrace(outStream);
 				assert false;
 			}
 		}
