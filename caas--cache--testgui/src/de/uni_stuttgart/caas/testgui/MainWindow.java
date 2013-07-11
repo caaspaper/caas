@@ -14,6 +14,7 @@ import java.awt.Insets;
 import java.awt.FlowLayout;
 import java.text.NumberFormat;
 import java.util.regex.Pattern;
+import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
@@ -25,21 +26,22 @@ import de.uni_stuttgart.caas.testgui.RegexFormatter;
 public class MainWindow {
 
 	private JFrame frame;
-	
+
 	private final short DEFAULT_ADMIN_PORT = AdminNode.DEFAULT_PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	private final int DEFAULT_CAPACITY = AdminNode.DEFAULT_INITIAL_CAPACITY;
-	
+
 	private ImprovedFormattedTextField numNodesField;
 	private ImprovedFormattedTextField adminCapacityField;
 	private ImprovedFormattedTextField adminPortField;
 	private ImprovedFormattedTextField addressOfAdminField;
-	
+	private AdminNode admin;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		System.out.println("starting up");
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -63,24 +65,24 @@ public class MainWindow {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		
+
 		JPanel applicationPanel = new JPanel();
 		JLabel header = new JLabel("CaaS Gui");
-		
+
 		frame = new JFrame();
 		frame.setResizable(false);
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.getContentPane().setLayout(new BorderLayout(0, 0));		
-		
+		frame.getContentPane().setLayout(new BorderLayout(0, 0));
+
 		header.setHorizontalAlignment(SwingConstants.CENTER);
-		frame.getContentPane().add(header, BorderLayout.CENTER);
+		frame.getContentPane().add(header, BorderLayout.NORTH);
 
 		frame.getContentPane().add(applicationPanel, BorderLayout.SOUTH);
 		applicationPanel.setLayout(new BorderLayout(0, 0));
 		applicationPanel.add(createStartupPanel(), BorderLayout.NORTH);
 		applicationPanel.add(createRuntimePanel(), BorderLayout.SOUTH);
-		
+
 		frame.pack();
 	}
 
@@ -138,36 +140,32 @@ public class MainWindow {
 		adminPortField = new ImprovedFormattedTextField(intFormat, DEFAULT_ADMIN_PORT);
 		adminPortField.setColumns(6);
 		adminPanel.add(adminPortField);
-		
-		
+
 		JLabel lblNumberOfNodes = new JLabel("Number of nodes Connecting");
 		adminPanel.add(lblNumberOfNodes);
-		
+
 		adminCapacityField = new ImprovedFormattedTextField(intFormat, DEFAULT_CAPACITY);
 		adminCapacityField.setColumns(10);
 		adminPanel.add(adminCapacityField);
-		
+
 		return adminPanel;
 	}
 
 	private JPanel createCacheNodePanel() {
 
 		JPanel cacheNodePanel = new JPanel();
-		
+
 		JLabel lblAddressOfAdmin = new JLabel("Address of admin node");
 		cacheNodePanel.add(lblAddressOfAdmin);
-		addressOfAdminField = new ImprovedFormattedTextField(new RegexFormatter(
-				Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
-		addressOfAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);		
+		addressOfAdminField = new ImprovedFormattedTextField(new RegexFormatter(Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+				+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
+		addressOfAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);
 		addressOfAdminField.setColumns(20);
 		cacheNodePanel.add(addressOfAdminField);
 
 		JLabel lblNumberOfCache = new JLabel("Number of Cache nodes to start");
 		cacheNodePanel.add(lblNumberOfCache);
-		
+
 		NumberFormat intFormat = NumberFormat.getIntegerInstance();
 		intFormat.setGroupingUsed(false);
 
@@ -183,104 +181,133 @@ public class MainWindow {
 		JPanel runTimeCommands = new JPanel();
 		GridBagLayout gbl_runTimeCommands = new GridBagLayout();
 		gbl_runTimeCommands.columnWidths = new int[] { 0, 0 };
-		gbl_runTimeCommands.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gbl_runTimeCommands.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		gbl_runTimeCommands.columnWeights = new double[] { 0.0, Double.MIN_VALUE };
-		gbl_runTimeCommands.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_runTimeCommands.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		runTimeCommands.setLayout(gbl_runTimeCommands);
 
-		JButton btnNewButton = new JButton("Start admin");
-		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
-		gbc_btnNewButton.insets = new Insets(0, 0, 5, 0);
-		gbc_btnNewButton.gridx = 0;
-		gbc_btnNewButton.gridy = 0;
-		
-		btnNewButton.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText()
-						+ "listening on port number" + adminPortField.getText());
-				
-				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-				new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
-			}
-		});
-		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
-
-		JButton btnNewButton_2 = new JButton("Start cache nodes");
+		JButton btnNewButton_2 = new JButton("Start nodes");
 		GridBagConstraints gbc_btnNewButton_2 = new GridBagConstraints();
 		gbc_btnNewButton_2.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_2.gridx = 0;
-		gbc_btnNewButton_2.gridy = 1;
+		gbc_btnNewButton_2.gridy = 3;
 		btnNewButton_2.addActionListener(new ActionListener() {
-			
+
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				System.out.println("Launching " + numNodesField.getValue()
-						+ " local nodes");
+				System.out.println("Launching " + numNodesField.getValue() + " local nodes");
 				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
 					new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
 				}
 			}
 		});
+
+		JButton btnNewButton = new JButton("Start admin");
+		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
+		gbc_btnNewButton.insets = new Insets(0, 0, 5, 0);
+		gbc_btnNewButton.gridx = 0;
+		gbc_btnNewButton.gridy = 2;
+
+		btnNewButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+
+				if (admin != null) {
+					JOptionPane.showMessageDialog(frame, "Admin already started", "error", JOptionPane.ERROR_MESSAGE);
+				} else {
+					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + "listening on port number"
+							+ adminPortField.getText());
+
+					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+				}
+			}
+		});
+		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
 		runTimeCommands.add(btnNewButton_2, gbc_btnNewButton_2);
 
 		JButton btnNewButton_3 = new JButton("New button");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
 		gbc_btnNewButton_3.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_3.gridx = 0;
-		gbc_btnNewButton_3.gridy = 2;
+		gbc_btnNewButton_3.gridy = 4;
 		runTimeCommands.add(btnNewButton_3, gbc_btnNewButton_3);
 
 		JButton btnNewButton_4 = new JButton("New button");
 		GridBagConstraints gbc_btnNewButton_4 = new GridBagConstraints();
 		gbc_btnNewButton_4.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_4.gridx = 0;
-		gbc_btnNewButton_4.gridy = 3;
+		gbc_btnNewButton_4.gridy = 5;
 		runTimeCommands.add(btnNewButton_4, gbc_btnNewButton_4);
 
 		JButton button = new JButton("New button");
 		GridBagConstraints gbc_button = new GridBagConstraints();
 		gbc_button.insets = new Insets(0, 0, 5, 0);
 		gbc_button.gridx = 0;
-		gbc_button.gridy = 4;
+		gbc_button.gridy = 6;
 		runTimeCommands.add(button, gbc_button);
 
 		JButton button_1 = new JButton("New button");
 		GridBagConstraints gbc_button_1 = new GridBagConstraints();
 		gbc_button_1.insets = new Insets(0, 0, 5, 0);
 		gbc_button_1.gridx = 0;
-		gbc_button_1.gridy = 5;
+		gbc_button_1.gridy = 7;
 		runTimeCommands.add(button_1, gbc_button_1);
 
-		JButton button_2 = new JButton("New button");
-		GridBagConstraints gbc_button_2 = new GridBagConstraints();
-		gbc_button_2.insets = new Insets(0, 0, 5, 0);
-		gbc_button_2.gridx = 0;
-		gbc_button_2.gridy = 6;
-		runTimeCommands.add(button_2, gbc_button_2);
+		JButton btnStopProcesses = new JButton("stop admin");
+		GridBagConstraints gbc_btnStopProcesses = new GridBagConstraints();
+		gbc_btnStopProcesses.insets = new Insets(0, 0, 5, 0);
+		gbc_btnStopProcesses.gridx = 0;
+		gbc_btnStopProcesses.gridy = 8;
+		btnStopProcesses.addActionListener(new ActionListener() {
 
-		JButton button_3 = new JButton("New button");
-		GridBagConstraints gbc_button_3 = new GridBagConstraints();
-		gbc_button_3.insets = new Insets(0, 0, 5, 0);
-		gbc_button_3.gridx = 0;
-		gbc_button_3.gridy = 7;
-		runTimeCommands.add(button_3, gbc_button_3);
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if (admin == null) {
+					JOptionPane.showMessageDialog(frame, "admin has already been shut down", "error", JOptionPane.ERROR_MESSAGE);
+				} else {
+					System.out.println("system is shutting down");
+					admin.shutDownSystem();
+					admin = null;
+				}
+			}
+		});
+		runTimeCommands.add(btnStopProcesses, gbc_btnStopProcesses);
+
+		JButton btnShutdownSimu = new JButton("...");
+		GridBagConstraints gbc_btnShutdownSimu = new GridBagConstraints();
+		gbc_btnShutdownSimu.insets = new Insets(0, 0, 5, 0);
+		gbc_btnShutdownSimu.gridx = 0;
+		gbc_btnShutdownSimu.gridy = 9;
+		btnShutdownSimu.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+			}
+		});
+		runTimeCommands.add(btnShutdownSimu, gbc_btnShutdownSimu);
 
 		JButton exitButton = new JButton("Exit");
 		GridBagConstraints gbc_button_4 = new GridBagConstraints();
+		gbc_button_4.insets = new Insets(0, 0, 5, 0);
 		gbc_button_4.gridx = 0;
-		gbc_button_4.gridy = 8;
-		
+		gbc_button_4.gridy = 10;
+
 		exitButton.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				System.exit(0);
+				if (admin != null) {
+					JOptionPane.showMessageDialog(frame, "The admin has to be shut down first", "Error", JOptionPane.ERROR_MESSAGE);
+				} else {
+					System.exit(0);
+				}
 			}
 		});
-		
+
 		runTimeCommands.add(exitButton, gbc_button_4);
 
 		return runTimeCommands;
