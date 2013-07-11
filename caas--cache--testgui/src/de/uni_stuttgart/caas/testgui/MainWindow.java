@@ -1,7 +1,6 @@
 package de.uni_stuttgart.caas.testgui;
 
 import java.awt.EventQueue;
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
@@ -12,12 +11,17 @@ import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 import java.awt.FlowLayout;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.text.NumberFormat;
 import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import de.uni_stuttgart.caas.admin.AdminNode;
 import de.uni_stuttgart.caas.cache.CacheNode;
 import de.uni_stuttgart.caas.testgui.ImprovedFormattedTextField;
@@ -35,17 +39,19 @@ public class MainWindow {
 	private ImprovedFormattedTextField adminCapacityField;
 	private ImprovedFormattedTextField adminPortField;
 	private ImprovedFormattedTextField addressOfAdminField;
+	JTextArea outputField;
+
 	private AdminNode admin;
 
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		System.out.println("starting up");
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
 					MainWindow window = new MainWindow();
+					window.redirectSystemStreams();
 					window.frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -80,13 +86,17 @@ public class MainWindow {
 
 		frame.getContentPane().add(applicationPanel, BorderLayout.SOUTH);
 		applicationPanel.setLayout(new BorderLayout(0, 0));
-		applicationPanel.add(createStartupPanel(), BorderLayout.NORTH);
+		applicationPanel.add(createInputOptionsPanel(), BorderLayout.NORTH);
 		applicationPanel.add(createRuntimePanel(), BorderLayout.SOUTH);
 
 		frame.pack();
 	}
 
-	private JPanel createStartupPanel() {
+	/**
+	 * Creates a panel with options for starting the simulation
+	 * 
+	 */
+	private JPanel createInputOptionsPanel() {
 
 		JPanel startupPanel = new JPanel();
 
@@ -98,6 +108,10 @@ public class MainWindow {
 		return startupPanel;
 	}
 
+	/**
+	 * Creates a panel with runtime relevant Components
+	 * 
+	 */
 	private JPanel createRuntimePanel() {
 
 		JPanel runtimePanel = new JPanel();
@@ -109,15 +123,18 @@ public class MainWindow {
 		return runtimePanel;
 	}
 
+	/**
+	 * Creates a Panel for the output
+	 */
 	private JPanel createOutputPanel() {
 
 		JPanel outputPanel = new JPanel();
 		outputPanel.setLayout(new BorderLayout(0, 0));
 
-		JTextArea textArea = new JTextArea();
-		textArea.setRows(50);
-		textArea.setColumns(60);
-		outputPanel.add(textArea);
+		outputField = new JTextArea();
+		outputField.setRows(50);
+		outputField.setColumns(60);
+		outputPanel.add(new JScrollPane(outputField));
 
 		JLabel lblOutput = new JLabel("output");
 		lblOutput.setHorizontalAlignment(SwingConstants.CENTER);
@@ -127,6 +144,9 @@ public class MainWindow {
 
 	}
 
+	/**
+	 * Creates a panel with options for the admin
+	 */
 	private JPanel createAdminNodePanel() {
 		JPanel adminPanel = new JPanel();
 		adminPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
@@ -151,6 +171,9 @@ public class MainWindow {
 		return adminPanel;
 	}
 
+	/**
+	 * Create a panel with options for the cache node
+	 */
 	private JPanel createCacheNodePanel() {
 
 		JPanel cacheNodePanel = new JPanel();
@@ -177,6 +200,9 @@ public class MainWindow {
 		return cacheNodePanel;
 	}
 
+	/**
+	 * Creates a panel with buttons to control the simulation
+	 */
 	private JPanel createRunTimeCommandsPanel() {
 		JPanel runTimeCommands = new JPanel();
 		GridBagLayout gbl_runTimeCommands = new GridBagLayout();
@@ -268,7 +294,7 @@ public class MainWindow {
 				if (admin == null) {
 					JOptionPane.showMessageDialog(frame, "admin has already been shut down", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
-					System.out.println("system is shutting down");
+					System.out.println("admin is shutting down");
 					admin.shutDownSystem();
 					admin = null;
 				}
@@ -276,7 +302,7 @@ public class MainWindow {
 		});
 		runTimeCommands.add(btnStopProcesses, gbc_btnStopProcesses);
 
-		JButton btnShutdownSimu = new JButton("...");
+		JButton btnShutdownSimu = new JButton("New Button");
 		GridBagConstraints gbc_btnShutdownSimu = new GridBagConstraints();
 		gbc_btnShutdownSimu.insets = new Insets(0, 0, 5, 0);
 		gbc_btnShutdownSimu.gridx = 0;
@@ -311,6 +337,40 @@ public class MainWindow {
 		runTimeCommands.add(exitButton, gbc_button_4);
 
 		return runTimeCommands;
+	}
+
+	// this taken from
+	// http://unserializableone.blogspot.de/2009/01/redirecting-systemout-and-systemerr-to.html
+	private void updateTextArea(final String text) {
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				outputField.append(text);
+			}
+		});
+	}
+
+	// this taken from
+	// http://unserializableone.blogspot.de/2009/01/redirecting-systemout-and-systemerr-to.html
+	private void redirectSystemStreams() {
+		OutputStream out = new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+				updateTextArea(String.valueOf((char) b));
+			}
+
+			@Override
+			public void write(byte[] b, int off, int len) throws IOException {
+				updateTextArea(new String(b, off, len));
+			}
+
+			@Override
+			public void write(byte[] b) throws IOException {
+				write(b, 0, b.length);
+			}
+		};
+
+		System.setOut(new PrintStream(out, true));
+		System.setErr(new PrintStream(out, true));
 	}
 
 }
