@@ -29,7 +29,7 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * 
  * 
  */
-public class AdminNode {
+public class AdminNode implements Runnable {
 
 	/** Current state of the admin node */
 	private AdminNodeState state;
@@ -54,6 +54,9 @@ public class AdminNode {
 	private Grid grid = null;
 	
 	private CountDownLatch activationCountDown;
+	
+	
+	Thread serverThread;
 
 	/**
 	 * 
@@ -98,7 +101,12 @@ public class AdminNode {
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
-
+		serverThread = new Thread(this);
+		serverThread.start();
+	}
+	
+	@Override
+	public void run() {
 		ServerSocket serverSocket = null;
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
@@ -109,7 +117,7 @@ public class AdminNode {
 
 		assert serverSocket != null;
 
-		while (true) {
+		while (!serverThread.isInterrupted()) {
 			try {
 				Socket clientSocket = serverSocket.accept();
 				NodeConnector nc = new NodeConnector(clientSocket);
@@ -119,6 +127,13 @@ public class AdminNode {
 				System.out.println("Accept failed: PORT_NUMBER");
 				e.printStackTrace();
 			}
+		}
+		
+		try {
+			serverSocket.close();
+		} catch (IOException e) {
+			System.out.println("server is being interrupted during an interrupt... should not happen");
+			e.printStackTrace();
 		}
 	}
 
@@ -341,7 +356,10 @@ public class AdminNode {
 	 */
 	public void shutDownSystem() {
 		
-	}
-	
+		// TODO shut everything down
+		
+		// close server
+		serverThread.interrupt();
+	}	
 	
 }
