@@ -189,6 +189,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 		while (true) {
 			try {
 				writeQueue.put(new OutgoingMessage(message, futureResponse));
+				break;
 			} catch (InterruptedException e) {
 				// put() internally does not wait for long, so nobody will
 				// intentionally interrupt() on the calling thread during
