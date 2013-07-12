@@ -53,7 +53,7 @@ public class CacheNode {
 	 */
 	public CacheNode(InetSocketAddress addr) {
 		if (addr.isUnresolved()) {
-			throw new IllegalArgumentException("unresolved host: " + addr.getHostString());
+			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
 
 		// System.out.println("cache node: connecting to " + addr.getAddress() +
