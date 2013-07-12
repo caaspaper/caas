@@ -243,7 +243,7 @@ public class MainWindow {
 				if (admin != null) {
 					JOptionPane.showMessageDialog(frame, "Admin already started", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
-					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + "listening on port number"
+					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
 
 					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
