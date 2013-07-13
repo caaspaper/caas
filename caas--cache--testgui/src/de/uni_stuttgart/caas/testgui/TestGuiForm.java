@@ -123,7 +123,7 @@ public class TestGuiForm extends JFrame {
 					
 					@Override
 					public void run() {
-						int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+						int numOfNodes = Integer.parseInt(numNodesField.getText());
 						for (int i = 0; i < numOfNodes; i++) {
 							try {
 								new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
