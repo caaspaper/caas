@@ -338,7 +338,7 @@ public class AdminNode implements Runnable {
 		Collection<NodeInfo> infoOnNeighbors = grid
 				.getNeighborInfo(addressOfNode);
 
-		return new AddToGridMessage(infoOnNeighbors);
+		return new AddToGridMessage(grid.getLocationOfNode(addressOfNode), infoOnNeighbors);
 	}
 
 	/**
