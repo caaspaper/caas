@@ -27,6 +27,8 @@ import de.uni_stuttgart.caas.messages.IMessage;
  * 
  */
 public class AdminNode {
+	
+	boolean sentActivate = false;
 
 	/** Current state of the admin node */
 	private AdminNodeState state;
@@ -267,7 +269,7 @@ public class AdminNode {
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
 
 		Collection<NodeInfo> infoOnNeighbors = grid.getNeighborInfo(addressOfNode);
-
+		assert sentActivate = false;
 		return new AddToGridMessage(infoOnNeighbors);
 	}
 
@@ -277,6 +279,7 @@ public class AdminNode {
 	 * @return a new activation message
 	 */
 	private IMessage activateNode() {
+		sentActivate = true;
 		return new ActivateNodeMessage();
 	}
 
