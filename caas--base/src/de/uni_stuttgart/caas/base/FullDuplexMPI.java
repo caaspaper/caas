@@ -245,7 +245,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 
 		public OutgoingMessage(IMessage _message, IResponseHandler _handler, int _uid, boolean _expectResponse) {
 			assert _message != null;
-			assert _handler != null;
+//			assert _handler != null;
 			assert _expectResponse || _handler == null;
 
 			message = _message;

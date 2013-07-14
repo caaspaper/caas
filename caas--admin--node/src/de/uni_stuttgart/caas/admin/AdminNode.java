@@ -269,7 +269,7 @@ public class AdminNode {
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
 
 		Collection<NodeInfo> infoOnNeighbors = grid.getNeighborInfo(addressOfNode);
-		assert sentActivate = false;
+		assert sentActivate == false;
 		return new AddToGridMessage(infoOnNeighbors);
 	}
 
