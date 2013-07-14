@@ -34,7 +34,7 @@ public class AdminNode implements Runnable {
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
-	public final static int DEFAULT_INITIAL_CAPACITY = 64;
+	public final static int DEFAULT_INITIAL_CAPACITY = 15;
 	public final int INITIAL_CAPACITY;
 
 	public final static int DEFAULT_PORT_NUMBER = 5007;
