@@ -142,7 +142,7 @@ public class CacheNode {
 			if (type != MessageType.ADD_TO_GRID) {
 				System.out.println("Error in Protocol");
 			}
-			addNeighboringNodes(((AddToGridMessage) message).getNeighboringNodes());
+			proccessAddToGridMessage((AddToGridMessage) message);
 			currentState = CacheNodeState.AWAITING_ACTIVATION;
 			return new ConfirmationMessage(0, "Added neighbors");
 
@@ -163,6 +163,16 @@ public class CacheNode {
 		}
 
 		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
+	}
+
+	/**
+	 * Process an AddToGridMessage adding neighbor info and own location
+	 * @param message the AddToGridMessage
+	 */
+	private void proccessAddToGridMessage(AddToGridMessage message) {
+		
+		this.position = message.locationOfNode;
+		addNeighboringNodes(message.getNeighboringNodes());
 	}
 
 	/**

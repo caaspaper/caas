@@ -33,7 +33,7 @@ public class AdminNode {
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
-	public final static int DEFAULT_INITIAL_CAPACITY = 64;
+	public final static int DEFAULT_INITIAL_CAPACITY = 15;
 	public final int INITIAL_CAPACITY;
 
 	public final static int DEFAULT_PORT_NUMBER = 5007;
@@ -270,9 +270,8 @@ public class AdminNode {
 	 */
 	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
 
-		Collection<NodeInfo> infoOnNeighbors = grid.getNeighborInfo(addressOfNode);
 		assert sentActivate == false;
-		return new AddToGridMessage(infoOnNeighbors);
+		return new AddToGridMessage(grid.getLocationOfNode(addressOfNode), grid.getNeighborInfo(addressOfNode));
 	}
 
 	/**

@@ -78,28 +78,28 @@ public class Grid {
 		// shell of grid
 		for (int j = 0; j < numberOfNodesInOneLine; j++) {
 			currentAddress = addresses.poll();
-			currentPoint.setLocation(x, y);
+			currentPoint = new LocationOfNode(x, y);
 			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			x += distanceBetweenNodes;
 		}
 		for (int j = 0; j < numberOfNodesInOneLine; j++) {
 			currentAddress = addresses.poll();
-			currentPoint.setLocation(x, y);
+			currentPoint = new LocationOfNode(x, y);
 			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			y += distanceBetweenNodes;
 		}
 		for (int j = 0; j < numberOfNodesInOneLine; j++) {
 			currentAddress = addresses.poll();
-			currentPoint.setLocation(x, y);
+			currentPoint = new LocationOfNode(x, y);
 			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			x -= distanceBetweenNodes;
 		}
 		for (int j = 0; j < numberOfNodesInOneLine; j++) {
 			currentAddress = addresses.poll();
-			currentPoint.setLocation(x, y);
+			currentPoint = new LocationOfNode(x, y);
 			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			y -= distanceBetweenNodes;
@@ -109,7 +109,7 @@ public class Grid {
 
 		// fill the rest
 		while ((currentAddress = addresses.poll()) != null) {
-			currentPoint.setLocation(x, y);
+			currentPoint = new LocationOfNode(x, y);
 			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			x += distanceBetweenNodes;
@@ -231,5 +231,20 @@ public class Grid {
 			}
 		}
 		return infoOnNeighbors;
+	}
+
+	/**
+	 * Method to get Location of node given it's address
+	 * 
+	 * @param addr
+	 *            the address of the node
+	 * @return the location of the node
+	 */
+	public Point getLocationOfNode(InetSocketAddress addr) {
+		NodeInfo l = connectedNodes.get(addr);
+		if (l == null) {
+			throw new IllegalArgumentException("Address not in Grid");
+		}
+		return l.getLocationOfNode();
 	}
 }
