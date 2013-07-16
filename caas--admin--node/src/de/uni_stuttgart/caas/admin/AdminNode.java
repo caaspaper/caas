@@ -29,7 +29,7 @@ import de.uni_stuttgart.caas.messages.IMessage;
 public class AdminNode {
 	
 	boolean sentActivate = false;
-
+	
 	/** Current state of the admin node */
 	private AdminNodeState state;
 
@@ -52,6 +52,8 @@ public class AdminNode {
 	private Grid grid = null;
 
 	private CountDownLatch activationCountDown;
+	
+	
 
 	/**
 	 * 
@@ -96,7 +98,7 @@ public class AdminNode {
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
-
+	
 		ServerSocket serverSocket = null;
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
