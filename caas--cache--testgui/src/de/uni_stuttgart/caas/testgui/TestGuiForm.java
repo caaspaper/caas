@@ -115,10 +115,26 @@ public class TestGuiForm extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching " + numNodesField.getValue()
 						+ " local nodes");
-				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-				for (int i = 0; i < numOfNodes; i++) {
-					new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
-				}
+				
+				// CacheNode constructors wait for the admin to be available, so we have
+				// to start them on a separate thread that only serves to construct them.
+				// Once the CacheNode's are all constructed, it dies.
+				Runnable r = new Runnable() {
+					
+					@Override
+					public void run() {
+						int numOfNodes = Integer.parseInt(numNodesField.getText());
+						for (int i = 0; i < numOfNodes; i++) {
+							try {
+								new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+							} catch (IOException e1) {
+								e1.printStackTrace();
+							}
+						}
+					}
+				};
+				Thread t = new Thread(r);
+				t.start();
 			}
 		});
 		btn.setBounds(WIDTH - 250, 300, 200, 50);

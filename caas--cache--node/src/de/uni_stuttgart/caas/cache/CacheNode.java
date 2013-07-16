@@ -1,12 +1,12 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.TreeSet;
+import de.uni_stuttgart.caas.base.FullDuplexMPI;
+import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.*;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
@@ -43,15 +43,16 @@ public class CacheNode {
 	/**
 	 * Holds the connection to the admin node
 	 */
-	private Thread connectionToAdmin = null;
+	private AdminConnector connectionToAdmin;
 
 	/**
 	 * Construct a new cache node given the address of the admin node
 	 * 
 	 * @param addr
 	 *            the address of the admin node
+	 * @throws IOException 
 	 */
-	public CacheNode(InetSocketAddress addr) {
+	public CacheNode(InetSocketAddress addr) throws IOException {
 		if (addr.isUnresolved()) {
 			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
@@ -60,11 +61,18 @@ public class CacheNode {
 		// ":" + addr.getPort());
 
 		try {
-			connectionToAdmin = new Thread(new AdminConnector(addr));
+			connectionToAdmin = new AdminConnector(addr);
 		} catch (IOException e) {
-			System.out.println("Could not connect to server");
+			throw new IOException("Could not connect to server", e);
 		}
-		connectionToAdmin.start();
+		
+		connectionToAdmin.sendMessageAsync(new JoinMessage(), new IResponseHandler() {
+			
+			@Override
+			public void onResponseReceived(IMessage response) {
+				process(response);
+			}
+		});
 	}
 
 	/**
@@ -75,7 +83,7 @@ public class CacheNode {
 	 * @param port
 	 *            the port, the admin is running on
 	 */
-	public CacheNode(String host, String port) {
+	public CacheNode(String host, String port) throws IOException {
 
 		this(new InetSocketAddress(host, Integer.parseInt(port)));
 	}
@@ -154,7 +162,7 @@ public class CacheNode {
 			System.out.println("Error in Protocol");
 		}
 
-		return null;
+		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
 	}
 
 	/**
@@ -171,7 +179,9 @@ public class CacheNode {
 	 * Used to stop an active cache node
 	 */
 	public void stopNode() {
-		connectionToAdmin.interrupt();
+		connectionToAdmin.close();
+		// free up the reference
+		connectionToAdmin = null;
 	}
 
 	/**
@@ -188,12 +198,7 @@ public class CacheNode {
 	/**
 	 * This class is responsible for the interaction with the adminNode
 	 */
-	private class AdminConnector implements Runnable {
-
-		/**
-		 * Reference to the serverSocket
-		 */
-		private final Socket serverSocket;
+	private class AdminConnector extends FullDuplexMPI {
 
 		/**
 		 * Construct a new connector class
@@ -204,51 +209,16 @@ public class CacheNode {
 		 *             if the Socket can't be created, pass the error up
 		 */
 		public AdminConnector(InetSocketAddress address) throws IOException {
-
-			serverSocket = new Socket(address.getAddress(), address.getPort());
+			super(new Socket(address.getAddress(), address.getPort()), System.out);
 		}
+
 
 		@Override
-		public void run() {
-
-			ObjectInputStream in = null;
-			ObjectOutputStream out = null;
-
-			try {
-				out = new ObjectOutputStream(serverSocket.getOutputStream());
-				in = new ObjectInputStream(serverSocket.getInputStream());
-			} catch (IOException e) {
-				System.out.println("Could not initiate input and output with server");
-			}
-
-			try {
-
-				// initiate connection by sending a join message
-				out.writeObject(new JoinMessage());
-
-				// read a message from the admin and respond to it
-				while (true) {
-					IMessage message = null;
-					try {
-						message = (IMessage) in.readObject();
-					} catch (ClassNotFoundException e) {
-						System.out.println("received unknown class!");
-					} catch (ClassCastException e) {
-						System.out.println("error while casting to IMessage");
-					}
-					IMessage responce = process(message);
-
-					// as not to Confirm confirm messages
-					if (responce != null) {
-						out.writeObject(responce);
-					}
-				}
-
-			} catch (IOException e) {
-				System.out.println("Error while sending/ receiving data");
-			}
+		public IMessage processIncomingMessage(IMessage message) {
+			final IMessage response = process(message);
+			assert response != null;
+			return response;
 		}
-
 	}
 
 	/**
@@ -261,7 +231,11 @@ public class CacheNode {
 		if (args.length != 2) {
 			throw new IllegalArgumentException("please provide the host and the port of the admin node");
 		}
-		new CacheNode(args[0], args[1]);
+		try {
+			new CacheNode(args[0], args[1]);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
