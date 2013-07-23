@@ -13,6 +13,7 @@ import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
+import de.uni_stuttgart.caas.messages.IMessage.MessageType;
 
 /**
  * AdminNode
@@ -191,9 +192,15 @@ public class AdminNode {
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
 				// now send back messages to cache nodes
-				sendMessageAsync(addNodeToGrid(clientAddress));
-
-				activationCountDown.countDown();
+				sendMessageAsync(addNodeToGrid(clientAddress), new IResponseHandler() {
+					
+					@Override
+					public void onResponseReceived(IMessage response) {
+						
+						assert response.getMessageType() == MessageType.CONFIRM;
+						activationCountDown.countDown();
+					}
+				});
 
 				try {
 					activationCountDown.await();
