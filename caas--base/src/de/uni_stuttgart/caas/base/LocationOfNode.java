@@ -41,5 +41,10 @@ public class LocationOfNode implements Point, Serializable {
 	public LocationOfNode (double x, double y) {
 		setLocation(x, y);
 	}
+	
+	@Override
+	public String toString() {
+		return "(" + x + ", " + y + ")";
+	}
 
 }

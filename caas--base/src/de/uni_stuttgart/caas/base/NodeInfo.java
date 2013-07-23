@@ -77,5 +77,10 @@ public class NodeInfo implements Serializable{
 		return false;
 
 	}
+	
+	@Override
+	public String toString() {
+		return NODE_ADDRESS + "->" + locationOfNode;
+	}
 
 }
