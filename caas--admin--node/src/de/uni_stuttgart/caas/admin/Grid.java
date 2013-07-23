@@ -37,8 +37,8 @@ public class Grid {
 	/**
 	 * bounds for the grid
 	 */
-	public static final int MAX_GRID_INDEX = 1000000;
-	public static final int MIN_GRID_INDEX = -1000000;
+	public static final int MAX_GRID_INDEX = 1024;
+	public static final int MIN_GRID_INDEX = 0;
 
 	/**
 	 * number of connections
@@ -226,7 +226,7 @@ public class Grid {
 
 			if (pointsInSegment.get(0).equals(pointOfNode)) {
 				infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(pointsInSegment.get(1)), pointsInSegment.get(1)));
-			} else {
+			} else if (pointsInSegment.get(1).equals(pointOfNode)) {
 				infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(pointsInSegment.get(0)), pointsInSegment.get(0)));
 			}
 		}
