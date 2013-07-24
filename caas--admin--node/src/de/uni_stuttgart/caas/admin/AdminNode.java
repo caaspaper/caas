@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
@@ -14,6 +14,7 @@ import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
+import delaunay.Segment;
 
 /**
  * AdminNode
@@ -27,7 +28,7 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * 
  * 
  */
-public class AdminNode {
+public class AdminNode implements Runnable {
 	
 	boolean sentActivate = false;
 	
@@ -54,6 +55,7 @@ public class AdminNode {
 
 	private CountDownLatch activationCountDown;
 	
+	private Thread server;
 	
 
 	/**
@@ -99,28 +101,9 @@ public class AdminNode {
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
-	
-		ServerSocket serverSocket = null;
-		try {
-			serverSocket = new ServerSocket(PORT_NUMBER);
-		} catch (IOException e) {
-			System.out.println("Could not listen on PORT_NUMBER");
-			e.printStackTrace();
-		}
-
-		assert serverSocket != null;
-
-		while (true) {
-			try {
-				Socket clientSocket = serverSocket.accept();
-				NodeConnector nc = new NodeConnector(clientSocket);
-
-				// TODO: NodeConnector shutdown
-			} catch (IOException e) {
-				System.out.println("Accept failed: PORT_NUMBER");
-				e.printStackTrace();
-			}
-		}
+		
+		server = new Thread(this);
+		server.start();
 	}
 
 	/**
@@ -292,10 +275,51 @@ public class AdminNode {
 	}
 
 	/**
-	 * TODO Alex Shut down all connected nodes and then shutdown admin
+	 * 
 	 */
 	public void shutDownSystem() {
+		server.interrupt();
+	}
+	
+	public List<NodeInfo> getNodes() {
+		return grid.getNodes();
+	}
 
+	@Override
+	public void run() {
+		ServerSocket serverSocket = null;
+
+		try {
+			serverSocket = new ServerSocket(PORT_NUMBER);
+		} catch (IOException e) {
+			System.out.println("Could not listen on PORT_NUMBER");
+			e.printStackTrace();
+		}
+
+		assert serverSocket != null;
+
+		while (!server.isInterrupted()) {
+			try {
+				Socket clientSocket = serverSocket.accept();
+				NodeConnector nc = new NodeConnector(clientSocket);
+
+				// TODO: NodeConnector shutdown
+			} catch (IOException e) {
+				System.out.println("Accept failed: PORT_NUMBER");
+				e.printStackTrace();
+			}
+		}
+		try {
+			serverSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public List<Segment> getSegments() {
+		
+		return grid.getSegments();
 	}
 
 }

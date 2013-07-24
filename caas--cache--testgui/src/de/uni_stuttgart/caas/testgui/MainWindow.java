@@ -39,8 +39,8 @@ public class MainWindow {
 	private ImprovedFormattedTextField adminCapacityField;
 	private ImprovedFormattedTextField adminPortField;
 	private ImprovedFormattedTextField addressOfAdminField;
-	JTextArea outputField;
-
+	private JTextArea outputField;
+	private NetworkGraph window;
 	private AdminNode admin;
 
 	/**
@@ -251,29 +251,45 @@ public class MainWindow {
 					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
 
-//					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-//					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
-					Runnable r = new Runnable() {
-						
-						@Override
-						public void run() {
-							int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-							admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
-						}
-					};
-					new Thread(r).start();
+					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
 				}
 			}
 		});
 		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
 		runTimeCommands.add(btnNewButton_2, gbc_btnNewButton_2);
 
-		JButton btnNewButton_3 = new JButton("New button");
+		JButton graphButton = new JButton("Network Graph");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
 		gbc_btnNewButton_3.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_3.gridx = 0;
 		gbc_btnNewButton_3.gridy = 4;
-		runTimeCommands.add(btnNewButton_3, gbc_btnNewButton_3);
+		graphButton.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				if (admin == null) {
+					JOptionPane.showMessageDialog(frame, "The admin has to be running", "Error", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+				if (window != null) {
+					window.setVisible(true);
+				} else {
+					EventQueue.invokeLater(new Runnable() {
+						public void run() {
+							try {
+								window = new NetworkGraph(admin.getNodes(), admin.getSegments());
+								window.setVisible(true);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					});
+				}
+			}
+		});
+		runTimeCommands.add(graphButton, gbc_btnNewButton_3);
 
 		JButton btnNewButton_4 = new JButton("New button");
 		GridBagConstraints gbc_btnNewButton_4 = new GridBagConstraints();
@@ -296,7 +312,7 @@ public class MainWindow {
 		gbc_button_1.gridy = 7;
 		runTimeCommands.add(button_1, gbc_button_1);
 
-		JButton btnStopProcesses = new JButton("stop admin");
+		final JButton btnStopProcesses = new JButton("stop admin");
 		GridBagConstraints gbc_btnStopProcesses = new GridBagConstraints();
 		gbc_btnStopProcesses.insets = new Insets(0, 0, 5, 0);
 		gbc_btnStopProcesses.gridx = 0;
@@ -321,13 +337,6 @@ public class MainWindow {
 		gbc_btnShutdownSimu.insets = new Insets(0, 0, 5, 0);
 		gbc_btnShutdownSimu.gridx = 0;
 		gbc_btnShutdownSimu.gridy = 9;
-		btnShutdownSimu.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-			}
-		});
 		runTimeCommands.add(btnShutdownSimu, gbc_btnShutdownSimu);
 
 		JButton exitButton = new JButton("Exit");
@@ -341,10 +350,10 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				if (admin != null) {
-					JOptionPane.showMessageDialog(frame, "The admin has to be shut down first", "Error", JOptionPane.ERROR_MESSAGE);
-				} else {
-					System.exit(0);
+					admin.shutDownSystem();
+					admin = null;
 				}
+				System.exit(0);
 			}
 		});
 
