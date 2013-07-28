@@ -129,7 +129,7 @@ public class TestGuiForm extends JFrame {
 							try {
 								final String[] cache_args = ipAdminField.getText().split(":"); 
 								//ipAdminField validation regex allows port to be optional
-								final String port = cache_args[0].length()==2 ? cache_args[0] : adminPortField.getText();
+								final String port = cache_args.length==2 ? cache_args[0] : adminPortField.getText();
 								new CacheNode(cache_args[0], Integer.parseInt(port));
 							} catch (IOException e1) {
 								e1.printStackTrace();
