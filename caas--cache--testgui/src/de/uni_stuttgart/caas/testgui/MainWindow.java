@@ -222,7 +222,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				System.out.println("Launching " + numNodesField.getValue() + " local nodes");
-				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				int numOfNodes = Integer.parseInt(numNodesField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
 						new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
@@ -251,10 +251,8 @@ public class MainWindow {
 					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
 
-//					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-//					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
 					Runnable r = new Runnable() {
-						
+
 						@Override
 						public void run() {
 							int numOfNodes = Integer.parseInt(adminCapacityField.getText());
