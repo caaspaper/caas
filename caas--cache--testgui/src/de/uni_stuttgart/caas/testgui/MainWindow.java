@@ -225,7 +225,9 @@ public class MainWindow {
 				int numOfNodes = Integer.parseInt(numNodesField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
-						new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+						final String[] cache_args = addressOfAdminField.getText().split(":"); 
+						final String port = cache_args[0].length()==2 ? cache_args[0] : adminPortField.getText();
+						new CacheNode(cache_args[0], Integer.parseInt(port));
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
 						break;
@@ -256,7 +258,7 @@ public class MainWindow {
 						@Override
 						public void run() {
 							int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-							admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+							admin = new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
 						}
 					};
 					new Thread(r).start();
