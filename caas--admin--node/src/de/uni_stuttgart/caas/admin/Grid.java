@@ -119,20 +119,20 @@ public class Grid {
 				y += distanceBetweenNodes;
 			}
 		}
-		
+
 		// When running in Debug mode: check points for uniqueness
 		boolean assertsEnabled = false;
-        assert assertsEnabled = true; // intentional
-        if(assertsEnabled) {
-        	
+		assert assertsEnabled = true; // intentional
+		if (assertsEnabled) {
+
 			Set<Long> set = new HashSet<Long>();
-			for (Map.Entry<InetSocketAddress, NodeInfo> entry: connectedNodes.entrySet() ) {
+			for (Map.Entry<InetSocketAddress, NodeInfo> entry : connectedNodes.entrySet()) {
 				Point pt = entry.getValue().getLocationOfNode();
-				set.add(pt.getIX() | ((long)pt.getIY() << 32));
+				set.add(pt.getIX() | ((long) pt.getIY() << 32));
 			}
 			assert connectedNodes.size() == set.size();
-        }
-    }
+		}
+	}
 
 	/**
 	 * perform a triangulation on the nodes currently in the hashmap note:
