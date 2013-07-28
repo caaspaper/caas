@@ -123,6 +123,9 @@ public class CacheNode {
 	}
 
 	public IMessage process(IMessage message) {
+		if (currentState == CacheNodeState.DEAD) {
+			return null;
+		}
 
 		MessageType type = message.getMessageType();
 
@@ -133,6 +136,13 @@ public class CacheNode {
 		case INITIAL_STATE:
 			if (type != MessageType.CONFIRM) {
 				System.out.println("Error in Protocol");
+			}
+			ConfirmationMessage confirm = (ConfirmationMessage)message;
+			if (confirm.STATUS_CODE != 0) {
+				System.out.println("cache node: failure, reveived message was: " + confirm.MESSAGE);
+				// not so graceful shutdown
+				stopNode();
+				return null;				
 			}
 			currentState = CacheNodeState.AWAITING_DATA;
 			break;
@@ -179,6 +189,9 @@ public class CacheNode {
 	 * Used to stop an active cache node
 	 */
 	public void stopNode() {
+		assert currentState != CacheNodeState.DEAD;
+		System.out.println("cache node: shutting down");
+		currentState = CacheNodeState.DEAD;
 		connectionToAdmin.close();
 		// free up the reference
 		connectionToAdmin = null;
