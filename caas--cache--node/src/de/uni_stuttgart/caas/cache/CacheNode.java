@@ -36,9 +36,9 @@ public class CacheNode {
 	private TreeSet<NodeInfo> neighboringNodes;
 
 	/**
-	 * current state
+	 * current state - volatile because it is read and written to concurrently.
 	 */
-	private CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
+	private volatile CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
 
 	/**
 	 * Holds the connection to the admin node
