@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.swing.*;
@@ -68,7 +69,7 @@ public class TestGuiForm extends JFrame {
 					@Override
 					public void run() {
 						int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-						new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+						new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
 					}
 				};
 				Thread t = new Thread(r);
@@ -126,7 +127,10 @@ public class TestGuiForm extends JFrame {
 						int numOfNodes = Integer.parseInt(numNodesField.getText());
 						for (int i = 0; i < numOfNodes; i++) {
 							try {
-								new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+								final String[] cache_args = ipAdminField.getText().split(":"); 
+								//ipAdminField validation regex allows port to be optional
+								final String port = cache_args[0].length()==2 ? cache_args[0] : adminPortField.getText();
+								new CacheNode(cache_args[0], Integer.parseInt(port));
 							} catch (IOException e1) {
 								e1.printStackTrace();
 							}
