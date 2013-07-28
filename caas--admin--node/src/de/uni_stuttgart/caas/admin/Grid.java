@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -118,7 +119,20 @@ public class Grid {
 				y += distanceBetweenNodes;
 			}
 		}
-	}
+		
+		// When running in Debug mode: check points for uniqueness
+		boolean assertsEnabled = false;
+        assert assertsEnabled = true; // intentional
+        if(assertsEnabled) {
+        	
+			Set<Long> set = new HashSet<Long>();
+			for (Map.Entry<InetSocketAddress, NodeInfo> entry: connectedNodes.entrySet() ) {
+				Point pt = entry.getValue().getLocationOfNode();
+				set.add(pt.getIX() | ((long)pt.getIY() << 32));
+			}
+			assert connectedNodes.size() == set.size();
+        }
+    }
 
 	/**
 	 * perform a triangulation on the nodes currently in the hashmap note:
