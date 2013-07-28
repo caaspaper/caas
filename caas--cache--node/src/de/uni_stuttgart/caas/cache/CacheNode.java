@@ -72,6 +72,11 @@ public class CacheNode {
 			public void onResponseReceived(IMessage response) {
 				process(response);
 			}
+
+			@Override
+			public void onConnectionAborted() {
+				System.out.println("cache node: connection to admin was closed");
+			}
 		});
 	}
 
