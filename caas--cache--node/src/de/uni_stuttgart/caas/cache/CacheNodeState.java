@@ -24,6 +24,10 @@ public enum CacheNodeState {
 	/**
 	 * This is the active running state of a cache node
 	 */
-	ACTIVE
+	ACTIVE,
+	
+	
+	/** Non-recoverable dead state, active after calling close() on a cache node */
+	DEAD
 	
 }
