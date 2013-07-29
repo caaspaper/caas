@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
@@ -51,6 +52,9 @@ public class AdminNode {
 	 * thread should be able to initialize Grid.
 	 */
 	private Grid grid = null;
+	
+	private ArrayList<NodeConnector> connectors = new ArrayList<>();
+	private ServerSocket serverSocket = null;
 
 	private CountDownLatch activationCountDown;
 
@@ -98,7 +102,7 @@ public class AdminNode {
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
 
-		ServerSocket serverSocket = null;
+		
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
 		} catch (IOException e) {
@@ -111,9 +115,9 @@ public class AdminNode {
 		while (true) {
 			try {
 				Socket clientSocket = serverSocket.accept();
-				NodeConnector nc = new NodeConnector(clientSocket);
+				final NodeConnector nc = new NodeConnector(clientSocket);
+				connectors.add(nc);
 
-				// TODO: NodeConnector shutdown
 			} catch (IOException e) {
 				System.out.println("Accept failed: PORT_NUMBER");
 				e.printStackTrace();
@@ -296,10 +300,21 @@ public class AdminNode {
 	}
 
 	/**
-	 * TODO Alex Shut down all connected nodes and then shutdown admin
+	 * Shutdown the admin node, aborting all open connections to nodes
 	 */
 	public void shutDownSystem() {
-
+		for(NodeConnector con : connectors) {
+			con.close();
+		}
+		connectors = null;
+		
+		if(serverSocket == null) {
+			return;
+		}
+		try {
+			serverSocket.close();
+		} catch (IOException e) {
+			// ignore
+		}
 	}
-
 }
