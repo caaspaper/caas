@@ -78,10 +78,6 @@ public class FullDuplexMPITest {
 		// sock0 is "server", waiting for sock1 to connect
 		try {
 			final ServerSocket tempServer = new ServerSocket();
-			// allow re-using previous server sockets. This is needed because
-			// the OS would otherwise not allow to bind to the port if the last
-			// test run was within the TCP TIME_WAIT time.
-			tempServer.setReuseAddress(true);
 			tempServer.bind(new InetSocketAddress("localhost", port0));
 
 			adminThread = new Thread(new Runnable() {
@@ -94,6 +90,7 @@ public class FullDuplexMPITest {
 						sock0 = tempServer.accept();
 						tempServer.close();
 					} catch (IOException e) {
+						e.printStackTrace();
 						fail("connection failed (3)");
 						try {
 							tempServer.close();
@@ -133,6 +130,7 @@ public class FullDuplexMPITest {
 				}
 			});
 		} catch (IOException e1) {
+			e1.printStackTrace();
 			fail("connection failed (2)");
 		}
 
@@ -154,6 +152,7 @@ public class FullDuplexMPITest {
 				}
 			};
 		} catch (IOException e) {
+			e.printStackTrace();
 			fail("connection failed (1)");
 		}
 
@@ -164,8 +163,8 @@ public class FullDuplexMPITest {
 			// moderate timeout to make sure we eventually get a failure
 			latch.await(20, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			fail("unexpected interruption (1)");
 			e.printStackTrace();
+			fail("unexpected interruption (1)");
 		}
 
 		// check if all messages were acknowledged
@@ -180,8 +179,8 @@ public class FullDuplexMPITest {
 		try {
 			adminThread.join();
 		} catch (InterruptedException e) {
-			fail("unexpected interruption (2)");
 			e.printStackTrace();
+			fail("unexpected interruption (2)");
 		}
 	}
 }
