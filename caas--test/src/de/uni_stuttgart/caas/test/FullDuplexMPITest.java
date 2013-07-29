@@ -50,6 +50,11 @@ public class FullDuplexMPITest {
 				}
 				sendRecursiveAsyncMessages(party, first);
 			}
+
+			@Override
+			public void onConnectionAborted() {
+				fail("onConnectionAborted() unexpected");
+			}
 		});
 	}
 
