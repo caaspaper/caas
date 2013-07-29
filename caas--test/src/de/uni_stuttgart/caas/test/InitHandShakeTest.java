@@ -94,18 +94,13 @@ public class InitHandShakeTest {
 
 		final int adminPort = 6535;
 
-		// launch admin node
-		final Thread server = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				// currently, AdminNode loops forever until IOException occurs.
-				// a pending pull request changes this, however.
-				final AdminNode admin = new AdminNode(adminPort, capacity);
-				admin.shutDownSystem();
-			}
-		});
-
-		server.start();
+		AdminNode admin = null;
+		try {
+			admin = new AdminNode(adminPort, capacity);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			fail("unexpected interruption (1)");
+		}
 
 		CacheNode[] nodes = new CacheNode[numNodes];
 
@@ -135,37 +130,34 @@ public class InitHandShakeTest {
 			assertTrue(activateLatch.await(20, TimeUnit.SECONDS));
 			assertTrue(rejectedCacheNodesLatch.await(20, TimeUnit.SECONDS));
 		} catch (InterruptedException e) {
-			fail("unexpected interruption");
 			e.printStackTrace();
+			fail("unexpected interruption (1)");
 		}
 
 		// cleanup
 		for (CacheNode node : nodes) {
 			node.stopNode();
 		}
-		server.interrupt();
+		admin.close();
 	}
 
 	@Test
 	public void testCapacity3NodeCount3() {
 		testInitialHandshake(3, 3);
 	}
-	
+
 	@Test
 	public void testCapacity3NodeCount5() {
 		testInitialHandshake(3, 5);
-	}  
-	
+	}
+
 	@Test
 	public void testCapacity50NodeCount50() {
 		testInitialHandshake(50, 50);
 	}
-	
+
 	@Test
 	public void testCapacity50NodeCount51() {
 		testInitialHandshake(50, 51);
 	}
 }
-
-
-
