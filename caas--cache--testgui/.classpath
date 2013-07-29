@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="src" path="/caas--admin--node"/>
 	<classpathentry kind="src" path="/caas--cache--node"/>
+	<classpathentry exported="true" kind="src" path="/JDT"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

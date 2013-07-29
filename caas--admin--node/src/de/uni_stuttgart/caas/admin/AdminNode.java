@@ -14,6 +14,8 @@ import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
+import delaunay_triangulation.Delaunay_Triangulation;
+import delaunay_triangulation.Triangle_dt;
 
 /**
  * AdminNode
@@ -192,7 +194,8 @@ public class AdminNode {
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
 				// now send back messages to cache nodes
-				sendMessageAsync(addNodeToGrid(clientAddress), new IResponseHandler() {
+				IMessage m = addNodeToGrid(clientAddress);
+				sendMessageAsync(m, new IResponseHandler() {
 					
 					@Override
 					public void onResponseReceived(IMessage response) {
@@ -296,6 +299,10 @@ public class AdminNode {
 	 */
 	public void shutDownSystem() {
 
+	}
+	
+	public Delaunay_Triangulation getTriangulation() {
+		return grid.getTriangulation();
 	}
 
 }

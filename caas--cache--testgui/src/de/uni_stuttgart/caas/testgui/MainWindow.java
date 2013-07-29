@@ -226,7 +226,7 @@ public class MainWindow {
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
 						final String[] cache_args = addressOfAdminField.getText().split(":"); 
-						final String port = cache_args.length==2 ? cache_args[0] : adminPortField.getText();
+						final String port = cache_args.length==2 ? cache_args[1] : adminPortField.getText();
 						new CacheNode(cache_args[0], Integer.parseInt(port));
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
@@ -268,11 +268,18 @@ public class MainWindow {
 		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
 		runTimeCommands.add(btnNewButton_2, gbc_btnNewButton_2);
 
-		JButton btnNewButton_3 = new JButton("New button");
+		JButton btnNewButton_3 = new JButton("Triangulation");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
 		gbc_btnNewButton_3.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_3.gridx = 0;
 		gbc_btnNewButton_3.gridy = 4;
+		btnNewButton_3.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new gui.MyFrame(admin.getTriangulation());
+			}
+		});
 		runTimeCommands.add(btnNewButton_3, gbc_btnNewButton_3);
 
 		JButton btnNewButton_4 = new JButton("New button");
