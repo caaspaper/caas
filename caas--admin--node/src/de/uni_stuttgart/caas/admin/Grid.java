@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 
@@ -38,8 +39,8 @@ public class Grid {
 	/**
 	 * bounds for the grid
 	 */
-	public static final int MAX_GRID_INDEX = 1024;
-	public static final int MIN_GRID_INDEX = 0;
+	public static final int MAX_GRID_INDEX = 2000000000;
+//	public static final int MIN_GRID_INDEX = 0;
 
 	/**
 	 * number of connections
@@ -68,10 +69,19 @@ public class Grid {
 	 * 
 	 */
 	private void distributeCacheNodesOnGrid(Queue<InetSocketAddress> addresses) {
-
+		
+		Point p;
+		for (InetSocketAddress addr : addresses) {
+			while (pointToAddressMapping.containsKey(p = new LocationOfNode(Math.random() * MAX_GRID_INDEX + 1, Math.random() * MAX_GRID_INDEX + 1))) {}
+			
+			connectedNodes.put(addr, new NodeInfo(addr, p));
+			pointToAddressMapping.put(p, addr);
+		}
+		
+		/*
 		int numberOfNodesInOneLine = (int) Math.ceil(Math.sqrt(addresses.size()));
-		int distanceBetweenNodes = (MAX_GRID_INDEX - MIN_GRID_INDEX) / numberOfNodesInOneLine;
-		int x = MIN_GRID_INDEX, y = MIN_GRID_INDEX;
+		int distanceBetweenNodes = (MAX_GRID_INDEX) / numberOfNodesInOneLine;
+		int x = 0, y = 0;
 
 		InetSocketAddress currentAddress = null;
 		Point currentPoint = new LocationOfNode(0, 0);
@@ -115,23 +125,11 @@ public class Grid {
 			pointToAddressMapping.put(currentPoint, currentAddress);
 			x += distanceBetweenNodes;
 			if (x == MAX_GRID_INDEX) {
-				x = MIN_GRID_INDEX + distanceBetweenNodes;
+				x = distanceBetweenNodes;
 				y += distanceBetweenNodes;
 			}
 		}
-
-		// When running in Debug mode: check points for uniqueness
-		boolean assertsEnabled = false;
-		assert assertsEnabled = true; // intentional
-		if (assertsEnabled) {
-
-			Set<Long> set = new HashSet<Long>();
-			for (Map.Entry<InetSocketAddress, NodeInfo> entry : connectedNodes.entrySet()) {
-				Point pt = entry.getValue().getLocationOfNode();
-				set.add(pt.getIX() | ((long) pt.getIY() << 32));
-			}
-			assert connectedNodes.size() == set.size();
-		}
+		*/
 	}
 
 	/**
@@ -260,5 +258,19 @@ public class Grid {
 			throw new IllegalArgumentException("Address not in Grid");
 		}
 		return l.getLocationOfNode();
+	}
+
+	public List<NodeInfo> getNodes() {
+		
+		List<NodeInfo> nodes = new ArrayList<>();
+		for (Entry<InetSocketAddress, NodeInfo> e : connectedNodes.entrySet()) {
+			nodes.add(e.getValue());
+		}
+		return nodes;
+	}
+
+	public List<Segment> getSegments() {
+		
+		return (List<Segment>) triangulation.getSegments();
 	}
 }
