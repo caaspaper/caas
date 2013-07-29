@@ -90,7 +90,7 @@ public class AdminNode /* implements AutoClosable */{
 	public AdminNode(int portNumber, int initialCapacity) throws IOException {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
 
-		if (portNumber < 1024 || portNumber > 49151) {
+		if (portNumber < 1024 || portNumber > 65536) {
 			throw new IllegalArgumentException();
 		} else {
 			PORT_NUMBER = portNumber;

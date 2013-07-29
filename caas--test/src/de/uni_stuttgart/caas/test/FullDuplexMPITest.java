@@ -68,8 +68,17 @@ public class FullDuplexMPITest {
 	@Test
 	public void testBidirectionalCommunicationWithResponses() {
 
-		final int port0 = 6535;
-		final int port1 = 6536;
+		// due to TIME_WAIT after closing a connection we cannot reuse a fixed
+		// port since this would cause multiple test runs in a row to fail.
+		// therefore, get two free ports we can use.
+		int port0, port1;
+		try {
+			port0 = PortFinder.findOpen();
+			port1 = PortFinder.findOpen();
+		} catch (IOException e2) {
+			fail("could not allocate local ports");
+			return;
+		}
 
 		final Socket sock1 = new Socket();
 

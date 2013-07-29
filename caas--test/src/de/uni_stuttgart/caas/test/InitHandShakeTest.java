@@ -92,7 +92,16 @@ public class InitHandShakeTest {
 		// sending their JOIN request
 		rejectedCacheNodesLatch = new CountDownLatch(numNodes - capacity);
 
-		final int adminPort = 6535;
+		// due to TIME_WAIT after closing a connection we cannot reuse a fixed
+		// port since this would cause multiple test runs in a row to fail.
+		// therefore, get a free port to use.
+		int adminPort;
+		try {
+			adminPort = PortFinder.findOpen();
+		} catch (IOException e2) {
+			fail("could not allocate local port");
+			return;
+		}
 
 		AdminNode admin = null;
 		try {
@@ -113,7 +122,7 @@ public class InitHandShakeTest {
 			}
 			while (true) {
 				try {
-					nodes[i] = new CacheNodeTester("localhost", 6535);
+					nodes[i] = new CacheNodeTester("localhost", adminPort);
 					break;
 				} catch (IOException e) {
 					// this might happen if the thread did not start yet,
