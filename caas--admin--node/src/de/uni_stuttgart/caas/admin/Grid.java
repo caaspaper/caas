@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -35,8 +37,7 @@ public class Grid {
 	/**
 	 * bounds for the grid
 	 */
-	public static final int MAX_GRID_INDEX = 1024;
-	public static final int MIN_GRID_INDEX = 0;
+	public static final int MAX_GRID_INDEX = 2000000000;
 
 	/**
 	 * number of connections
@@ -77,7 +78,6 @@ public class Grid {
 			connectedNodes.put(addr, new NodeInfo(addr, currentPoint));
 			pointToAddressMapping.put(currentPoint, addr);
 		}
-		
 	}
 
 	/**
@@ -260,4 +260,18 @@ public class Grid {
 		}
 	}
 	
+
+	public List<NodeInfo> getNodes() {
+		
+		List<NodeInfo> nodes = new ArrayList<>();
+		for (Entry<InetSocketAddress, NodeInfo> e : connectedNodes.entrySet()) {
+			nodes.add(e.getValue());
+		}
+		return nodes;
+	}
+
+//	public List<Segment> getSegments() {
+//		
+//		return (List<Segment>) triangulation.getSegments();
+//	}
 }
