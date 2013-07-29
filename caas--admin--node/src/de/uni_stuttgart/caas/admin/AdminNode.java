@@ -28,7 +28,7 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * 
  * 
  */
-public class AdminNode {
+public class AdminNode /* implements AutoClosable */{
 
 	boolean sentActivate = false;
 
@@ -52,11 +52,11 @@ public class AdminNode {
 	 * thread should be able to initialize Grid.
 	 */
 	private Grid grid = null;
-	
-	private ArrayList<NodeConnector> connectors = new ArrayList<>();
-	private ServerSocket serverSocket = null;
 
 	private CountDownLatch activationCountDown;
+
+	private final Thread acceptingThread;
+	private ServerSocket serverSocket;
 
 	/**
 	 * 
@@ -69,11 +69,9 @@ public class AdminNode {
 	/**
 	 * Creates Administrative Node
 	 * 
-	 * //first instance where Alex has Java-envy. ^_^ Alex.state = denial;
-	 * 
-	 * @throws Exception
+	 * See AdminNode(int portNumber, int initialCapacity) for more information.
 	 */
-	public AdminNode() {
+	public AdminNode() throws IOException {
 
 		this(DEFAULT_PORT_NUMBER, DEFAULT_INITIAL_CAPACITY);
 	}
@@ -81,10 +79,15 @@ public class AdminNode {
 	/**
 	 * Creates Administrative Node
 	 * 
+	 * This creates a new thread to handle incoming node connections. To
+	 * shutdown this thread and release all resources associated with the admin
+	 * node, call close()
+	 * 
 	 * @param initialCapacity
-	 * @throws Exception
+	 * @throws IOException
+	 *             if the ServerSocket for the given port could not be obtained.
 	 */
-	public AdminNode(int portNumber, int initialCapacity) {
+	public AdminNode(int portNumber, int initialCapacity) throws IOException {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
 
 		if (portNumber < 1024 || portNumber > 49151) {
@@ -102,27 +105,43 @@ public class AdminNode {
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
 
-		
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
+			serverSocket.setReuseAddress(true);
 		} catch (IOException e) {
 			System.out.println("Could not listen on PORT_NUMBER");
 			e.printStackTrace();
+			throw e;
 		}
 
 		assert serverSocket != null;
+		final ArrayList<NodeConnector> connectors = new ArrayList<>();
 
-		while (true) {
-			try {
-				Socket clientSocket = serverSocket.accept();
-				final NodeConnector nc = new NodeConnector(clientSocket);
-				connectors.add(nc);
+		// fire off a thread to accept incoming connections
+		acceptingThread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						Socket clientSocket = serverSocket.accept();
+						final NodeConnector nc = new NodeConnector(clientSocket);
+						connectors.add(nc);
 
-			} catch (IOException e) {
-				System.out.println("Accept failed: PORT_NUMBER");
-				e.printStackTrace();
+					} catch (IOException e) {
+						System.out.println("Accept failed: PORT_NUMBER");
+						e.printStackTrace();
+						break;
+					}
+				}
+
+				// shutdown: free all connections
+				for (NodeConnector con : connectors) {
+					con.close();
+				}
 			}
-		}
+		});
+
+		acceptingThread.start();
 	}
 
 	/**
@@ -302,18 +321,16 @@ public class AdminNode {
 	/**
 	 * Shutdown the admin node, aborting all open connections to nodes
 	 */
-	public void shutDownSystem() {
-		for(NodeConnector con : connectors) {
-			con.close();
-		}
-		connectors = null;
-		
-		if(serverSocket == null) {
-			return;
-		}
+	public void close() {
 		try {
+			// this causes accept() to throw
 			serverSocket.close();
 		} catch (IOException e) {
+			// ignore
+		} 
+		try {
+			acceptingThread.join();
+		} catch (InterruptedException e) {
 			// ignore
 		}
 	}
