@@ -256,7 +256,8 @@ public class MainWindow {
 							+ adminPortField.getText());
 
 					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+					int port = Integer.parseInt(adminPortField.getText());
+					admin = new AdminNode(port, numOfNodes);
 				}
 			}
 		});
