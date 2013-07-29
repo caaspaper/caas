@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,9 +27,9 @@ public class FullDuplexMPITest {
 
 	// Utility for testBidirectionalCommunicationWithResponses()
 	private void sendRecursiveAsyncMessages(final FullDuplexMPI party, final boolean first) {
-		
+
 		final int counter = first ? party0Counter : party1Counter;
-		
+
 		System.out.println(party + ": send " + counter);
 		party.sendMessageAsync(new ConfirmationMessage(counter, ""), new IResponseHandler() {
 			@Override
@@ -42,10 +43,9 @@ public class FullDuplexMPITest {
 					return;
 				}
 
-				if(first) {
+				if (first) {
 					party0Counter = newCounter;
-				}
-				else {
+				} else {
 					party1Counter = newCounter;
 				}
 				sendRecursiveAsyncMessages(party, first);
@@ -73,18 +73,39 @@ public class FullDuplexMPITest {
 
 		final Socket sock1 = new Socket();
 
+		Thread adminThread = null;
+
 		// sock0 is "server", waiting for sock1 to connect
 		try {
 			final ServerSocket tempServer = new ServerSocket();
+			// allow re-using previous server sockets. This is needed because
+			// the OS would otherwise not allow to bind to the port if the last
+			// test run was within the TCP TIME_WAIT time.
+			tempServer.setReuseAddress(true);
 			tempServer.bind(new InetSocketAddress("localhost", port0));
 
-			final Thread t = new Thread(new Runnable() {
+			adminThread = new Thread(new Runnable() {
 
 				@Override
 				public void run() {
+					Socket sock0 = null;
+
 					try {
-						final Socket sock0 = tempServer.accept();
-						final FullDuplexMPI party0 = new FullDuplexMPI(sock0, System.out) {
+						sock0 = tempServer.accept();
+						tempServer.close();
+					} catch (IOException e) {
+						fail("connection failed (3)");
+						try {
+							tempServer.close();
+						} catch (IOException e1) {
+							// ignore
+						}
+						return;
+					}
+
+					FullDuplexMPI party0 = null;
+					try {
+						party0 = new FullDuplexMPI(sock0, System.out) {
 
 							@Override
 							public IMessage processIncomingMessage(IMessage message) {
@@ -99,23 +120,23 @@ public class FullDuplexMPITest {
 					}
 
 					try {
-						latch.await();
+						// moderate timeout to make sure we eventually get a
+						// failure
+						latch.await(20, TimeUnit.SECONDS);
 					} catch (InterruptedException e) {
 						fail("unexpected interruption");
 					} finally {
-						try {
-							tempServer.close();
-						} catch (IOException e) {
-							// ignore
+						if (party0 != null) {
+							party0.close();
 						}
 					}
 				}
 			});
-			t.setDaemon(true);
-			t.start();
 		} catch (IOException e1) {
 			fail("connection failed (2)");
 		}
+
+		adminThread.start();
 
 		FullDuplexMPI party1 = null;
 
@@ -140,9 +161,11 @@ public class FullDuplexMPITest {
 		sendRecursiveAsyncMessages(party1, false);
 
 		try {
-			latch.await();
+			// moderate timeout to make sure we eventually get a failure
+			latch.await(20, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			fail("unexpected interruption");
+			fail("unexpected interruption (1)");
+			e.printStackTrace();
 		}
 
 		// check if all messages were acknowledged
@@ -153,6 +176,12 @@ public class FullDuplexMPITest {
 			sock1.close();
 		} catch (IOException e) {
 			// ignore
+		}
+		try {
+			adminThread.join();
+		} catch (InterruptedException e) {
+			fail("unexpected interruption (2)");
+			e.printStackTrace();
 		}
 	}
 }
