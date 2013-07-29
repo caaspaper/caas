@@ -136,7 +136,7 @@ public class InitHandShakeTest {
 
 		// cleanup
 		for (CacheNode node : nodes) {
-			node.stopNode();
+			node.close();
 		}
 		admin.close();
 	}

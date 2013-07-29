@@ -146,7 +146,7 @@ public class CacheNode {
 			if (confirm.STATUS_CODE != 0) {
 				System.out.println("cache node: failure, reveived message was: " + confirm.MESSAGE);
 				// not so graceful shutdown
-				stopNode();
+				close();
 				return null;				
 			}
 			currentState = CacheNodeState.AWAITING_DATA;
@@ -193,8 +193,10 @@ public class CacheNode {
 	/**
 	 * Used to stop an active cache node
 	 */
-	public void stopNode() {
-		assert currentState != CacheNodeState.DEAD;
+	public void close() {
+		if(currentState == CacheNodeState.DEAD) {
+			return;
+		}
 		System.out.println("cache node: shutting down");
 		currentState = CacheNodeState.DEAD;
 		connectionToAdmin.close();
