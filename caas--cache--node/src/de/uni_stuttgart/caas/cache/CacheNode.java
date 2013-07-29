@@ -36,9 +36,9 @@ public class CacheNode {
 	private TreeSet<NodeInfo> neighboringNodes;
 
 	/**
-	 * current state
+	 * current state - volatile because it is read and written to concurrently.
 	 */
-	private CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
+	private volatile CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
 
 	/**
 	 * Holds the connection to the admin node
@@ -83,9 +83,9 @@ public class CacheNode {
 	 * @param port
 	 *            the port, the admin is running on
 	 */
-	public CacheNode(String host, String port) throws IOException {
+	public CacheNode(String host, int port) throws IOException {
 
-		this(new InetSocketAddress(host, Integer.parseInt(port)));
+		this(new InetSocketAddress(host, port));
 	}
 
 	/**
@@ -232,7 +232,7 @@ public class CacheNode {
 			throw new IllegalArgumentException("please provide the host and the port of the admin node");
 		}
 		try {
-			new CacheNode(args[0], args[1]);
+			new CacheNode(args[0], Integer.parseInt(args[1]));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

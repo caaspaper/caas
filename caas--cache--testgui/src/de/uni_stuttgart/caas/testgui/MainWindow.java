@@ -222,10 +222,12 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				System.out.println("Launching " + numNodesField.getValue() + " local nodes");
-				int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				int numOfNodes = Integer.parseInt(numNodesField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
-						new CacheNode("localhost", String.valueOf(DEFAULT_ADMIN_PORT));
+						final String[] cache_args = addressOfAdminField.getText().split(":"); 
+						final String port = cache_args.length==2 ? cache_args[1] : adminPortField.getText();
+						new CacheNode(cache_args[0], Integer.parseInt(port));
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
 						break;
@@ -312,7 +314,7 @@ public class MainWindow {
 		gbc_button_1.gridy = 7;
 		runTimeCommands.add(button_1, gbc_button_1);
 
-		final JButton btnStopProcesses = new JButton("stop admin");
+		JButton btnStopProcesses = new JButton("stop admin");
 		GridBagConstraints gbc_btnStopProcesses = new GridBagConstraints();
 		gbc_btnStopProcesses.insets = new Insets(0, 0, 5, 0);
 		gbc_btnStopProcesses.gridx = 0;
