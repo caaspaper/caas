@@ -144,10 +144,12 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 * 
 	 * All pending response handlers receive onConnectionAborted().
 	 * 
-	 * Calling close() on an already-closed instance is undefined behaviour.
+	 * Calling close() on an already-closed instance is a no-op.
 	 */
 	public void close() {
-		assert !isShuttingDown;
+		if(isShuttingDown) {
+			return;
+		}
 
 		isShuttingDown = true;
 		reader.interrupt();
