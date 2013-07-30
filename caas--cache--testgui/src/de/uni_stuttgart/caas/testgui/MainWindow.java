@@ -253,15 +253,14 @@ public class MainWindow {
 					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
 
-					Runnable r = new Runnable() {
-
-						@Override
-						public void run() {
-							int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-							admin = new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
-						}
-					};
-					new Thread(r).start();
+					final int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+					try {
+						admin = new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
+					} catch (NumberFormatException e) {
+						JOptionPane.showMessageDialog(frame, "Failed to launch admin, invalid port", "Critical Error", JOptionPane.ERROR_MESSAGE);
+					} catch (IOException e) {
+						JOptionPane.showMessageDialog(frame, "Failed to launch admin, could not start server", "Critical Error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 		});
@@ -309,7 +308,7 @@ public class MainWindow {
 					JOptionPane.showMessageDialog(frame, "admin has already been shut down", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
 					System.out.println("admin is shutting down");
-					admin.shutDownSystem();
+					admin.close();
 					admin = null;
 				}
 			}
