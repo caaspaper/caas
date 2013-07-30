@@ -2,44 +2,16 @@ package de.uni_stuttgart.caas.base;
 
 import java.io.Serializable;
 
-import delaunay.Point;
+import delaunay_triangulation.Point_dt;
 
-public class LocationOfNode implements Point, Serializable {
+public class LocationOfNode extends Point_dt implements Serializable {
 
-	private double x;
-	private double y;
-	
-	
-	@Override
-	public int getIX() {
-		return (int) x;
-	}
-
-	@Override
-	public int getIY() {;
-		return (int) y;
-	}
-
-	@Override
-	public double getX() {
-		return x;
-	}
-
-	@Override
-	public double getY() {
-		return y;
-	}
-
-	@Override
-	public void setLocation(double x, double y) {
-		
-		this.x = x;
-		this.y = y;
-
-	}
+	public final int x, y;
 	
 	public LocationOfNode (double x, double y) {
-		setLocation(x, y);
+		super((int)x, (int)y);
+		this.x = (int) x;
+		this.y = (int) y;
 	}
 	
 	@Override
