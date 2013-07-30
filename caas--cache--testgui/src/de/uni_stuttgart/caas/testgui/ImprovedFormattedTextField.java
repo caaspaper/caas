@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////////
+// Cache as a Service (projekt-inf) (v0.1)
+// [ImprovedFormattedTextField.java]
+// (c) 2013 Ashley Marie Smith, Simon Hanna, Alexander Gessler
+//
+// All rights reserved.
+//
+// This code may not be published, distributed or otherwise made available to
+// third parties without the prior written consent of the copyright owners.
+//
+///////////////////////////////////////////////////////////////////////////////////
+
 package de.uni_stuttgart.caas.testgui;
 
 // Taken from http://stackoverflow.com/questions/1313390/is-there-any-way-to-accept-only-numeric-values-in-a-jtextfield
@@ -177,3 +189,5 @@ private void updateBackgroundOnEachUpdate() {
     }
   }
 }
+
+/* vi: set shiftwidth=4 tabstop=4: */ 
