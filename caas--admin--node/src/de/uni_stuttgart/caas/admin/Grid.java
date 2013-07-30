@@ -4,18 +4,18 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.Set;
+import java.util.Vector;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
-import delaunay.DelaunayTriangulation;
-import delaunay.Knuth;
-import delaunay.Point;
-import delaunay.Segment;
+import delaunay_triangulation.Delaunay_Triangulation;
+import delaunay_triangulation.Point_dt;
+import delaunay_triangulation.Triangle_dt;
 
 /**
  * 
@@ -26,20 +26,19 @@ public class Grid {
 	/**
 	 * Provides access to triangulation
 	 */
-	private DelaunayTriangulation triangulation;
+	private Triangulation triangulation;
 
 	/**
 	 * Set containing all connected Nodes
 	 */
 	private Map<InetSocketAddress, NodeInfo> connectedNodes;
 
-	private Map<Point, InetSocketAddress> pointToAddressMapping;
-
+	private Map<LocationOfNode, InetSocketAddress> pointToAddressMapping;
+	
 	/**
 	 * bounds for the grid
 	 */
-	public static final int MAX_GRID_INDEX = 1024;
-	public static final int MIN_GRID_INDEX = 0;
+	public static final int MAX_GRID_INDEX = 2000000000;
 
 	/**
 	 * number of connections
@@ -62,6 +61,10 @@ public class Grid {
 		performNewTriangulation();
 	}
 
+	
+	public Delaunay_Triangulation getTriangulation() {
+		return triangulation;
+	}
 	/**
 	 * Called once to add all the nodes from the join request manager to the
 	 * hashmap assigning them a location on the grid
@@ -69,68 +72,12 @@ public class Grid {
 	 */
 	private void distributeCacheNodesOnGrid(Queue<InetSocketAddress> addresses) {
 
-		int numberOfNodesInOneLine = (int) Math.ceil(Math.sqrt(addresses.size()));
-		int distanceBetweenNodes = (MAX_GRID_INDEX - MIN_GRID_INDEX) / numberOfNodesInOneLine;
-		int x = MIN_GRID_INDEX, y = MIN_GRID_INDEX;
-
-		InetSocketAddress currentAddress = null;
-		Point currentPoint = new LocationOfNode(0, 0);
-
-		// shell of grid
-		for (int j = 0; j < numberOfNodesInOneLine; j++) {
-			currentAddress = addresses.poll();
-			currentPoint = new LocationOfNode(x, y);
-			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
-			pointToAddressMapping.put(currentPoint, currentAddress);
-			x += distanceBetweenNodes;
-		}
-		for (int j = 0; j < numberOfNodesInOneLine; j++) {
-			currentAddress = addresses.poll();
-			currentPoint = new LocationOfNode(x, y);
-			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
-			pointToAddressMapping.put(currentPoint, currentAddress);
-			y += distanceBetweenNodes;
-		}
-		for (int j = 0; j < numberOfNodesInOneLine; j++) {
-			currentAddress = addresses.poll();
-			currentPoint = new LocationOfNode(x, y);
-			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
-			pointToAddressMapping.put(currentPoint, currentAddress);
-			x -= distanceBetweenNodes;
-		}
-		for (int j = 0; j < numberOfNodesInOneLine; j++) {
-			currentAddress = addresses.poll();
-			currentPoint = new LocationOfNode(x, y);
-			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
-			pointToAddressMapping.put(currentPoint, currentAddress);
-			y -= distanceBetweenNodes;
-		}
-		x += distanceBetweenNodes;
-		y += distanceBetweenNodes;
-
-		// fill the rest
-		while ((currentAddress = addresses.poll()) != null) {
-			currentPoint = new LocationOfNode(x, y);
-			connectedNodes.put(currentAddress, new NodeInfo(currentAddress, currentPoint));
-			pointToAddressMapping.put(currentPoint, currentAddress);
-			x += distanceBetweenNodes;
-			if (x == MAX_GRID_INDEX) {
-				x = MIN_GRID_INDEX + distanceBetweenNodes;
-				y += distanceBetweenNodes;
-			}
-		}
-
-		// When running in Debug mode: check points for uniqueness
-		boolean assertsEnabled = false;
-		assert assertsEnabled = true; // intentional
-		if (assertsEnabled) {
-
-			Set<Long> set = new HashSet<Long>();
-			for (Map.Entry<InetSocketAddress, NodeInfo> entry : connectedNodes.entrySet()) {
-				Point pt = entry.getValue().getLocationOfNode();
-				set.add(pt.getIX() | ((long) pt.getIY() << 32));
-			}
-			assert connectedNodes.size() == set.size();
+		LocationOfNode currentPoint = new LocationOfNode(0, 0);
+		
+		for (InetSocketAddress addr : addresses) {
+			while(pointToAddressMapping.containsKey(currentPoint = new LocationOfNode(Math.random() * MAX_GRID_INDEX, Math.random() * MAX_GRID_INDEX))) {}
+			connectedNodes.put(addr, new NodeInfo(addr, currentPoint));
+			pointToAddressMapping.put(currentPoint, addr);
 		}
 	}
 
@@ -139,13 +86,8 @@ public class Grid {
 	 * clears the previous triangulation
 	 */
 	private void performNewTriangulation() {
-		Set<InetSocketAddress> keys = connectedNodes.keySet();
-		List<Point> points = new ArrayList<>();
-		for (InetSocketAddress k : keys) {
-			points.add(connectedNodes.get(k).getLocationOfNode());
-		}
-		triangulation = new Knuth(points);
-		triangulation.update();
+		
+		triangulation = new Triangulation(pointToAddressMapping.keySet().toArray(new Point_dt[0]));
 	}
 
 	/**
@@ -154,12 +96,11 @@ public class Grid {
 	 * @param p
 	 *            the point to add
 	 */
-	private void addPointToTriangulation(Point p) {
+	private void addPointToTriangulation(LocationOfNode p) {
 		if (triangulation == null) {
-			triangulation = new Knuth();
+			triangulation = new Triangulation();
 		}
 		triangulation.addPoint(p);
-		triangulation.update();
 	}
 
 	/**
@@ -175,12 +116,9 @@ public class Grid {
 		if (connectedNodes.containsKey(address)) {
 			throw new IllegalArgumentException("node already in triangulation");
 		}
-		Point p = new LocationOfNode(Math.rint(MAX_GRID_INDEX), Math.rint(MAX_GRID_INDEX));
-
-		while (pointToAddressMapping.containsKey(p)) {
-			p.setLocation(Math.rint(MAX_GRID_INDEX), Math.rint(MAX_GRID_INDEX));
-		}
-		addNewNode(address, p);
+		LocationOfNode currentPoint = null;
+		while(pointToAddressMapping.containsKey(currentPoint = new LocationOfNode(Math.random() * MAX_GRID_INDEX, Math.random() * MAX_GRID_INDEX))) {}
+		addNewNode(address, currentPoint);
 	}
 
 	/**
@@ -193,7 +131,7 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address or point are already in triangulation
 	 */
-	public void addNewNode(InetSocketAddress address, Point p) {
+	public void addNewNode(InetSocketAddress address, LocationOfNode p) {
 
 		if (connectedNodes.containsKey(address) || pointToAddressMapping.containsKey(p)) {
 			throw new IllegalArgumentException("Address or location of node are already in triangulation");
@@ -212,12 +150,12 @@ public class Grid {
 	 * @param newLocation
 	 *            the new location of the node
 	 */
-	public void updateLocationOfNode(InetSocketAddress address, Point newLocation) {
-		Point oldLocation = connectedNodes.get(address).getLocationOfNode();
+	public void updateLocationOfNode(InetSocketAddress address, LocationOfNode newLocation) {
+		LocationOfNode oldLocation = connectedNodes.get(address).getLocationOfNode();
 		connectedNodes.get(address).updateLocation(newLocation);
 		pointToAddressMapping.remove(oldLocation);
 		pointToAddressMapping.put(newLocation, address);
-		performNewTriangulation();
+		triangulation.updatePoint(oldLocation, newLocation);
 	}
 
 	/**
@@ -228,21 +166,14 @@ public class Grid {
 	 * @return a collection with NodeInfos about the neighbors
 	 */
 	public Collection<NodeInfo> getNeighborInfo(InetSocketAddress addressOfNode) {
-		if (!triangulation.isUpdated()) {
-			triangulation.update();
-		}
-		Collection<Segment> segments = triangulation.getSegments();
+		
+		
 		Collection<NodeInfo> infoOnNeighbors = new ArrayList<>();
-		Point pointOfNode = connectedNodes.get(addressOfNode).getLocationOfNode();
+		LocationOfNode pointOfNode = connectedNodes.get(addressOfNode).getLocationOfNode();
 
-		for (Segment s : segments) {
-			List<Point> pointsInSegment = s.getPoints();
-
-			if (pointsInSegment.get(0).equals(pointOfNode)) {
-				infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(pointsInSegment.get(1)), pointsInSegment.get(1)));
-			} else if (pointsInSegment.get(1).equals(pointOfNode)) {
-				infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(pointsInSegment.get(0)), pointsInSegment.get(0)));
-			}
+		for (LocationOfNode p : triangulation.getNeighbors(pointOfNode)) {
+			
+			infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(p), p));
 		}
 		return infoOnNeighbors;
 	}
@@ -254,11 +185,99 @@ public class Grid {
 	 *            the address of the node
 	 * @return the location of the node
 	 */
-	public Point getLocationOfNode(InetSocketAddress addr) {
+	public LocationOfNode getLocationOfNode(InetSocketAddress addr) {
 		NodeInfo l = connectedNodes.get(addr);
 		if (l == null) {
 			throw new IllegalArgumentException("Address not in Grid");
 		}
 		return l.getLocationOfNode();
+	}
+	
+	/**
+	 * Extends the real triangulation to provide methods to access neighbors of nodes in a more or less efficient way
+	 * 
+	 */
+	private class Triangulation extends Delaunay_Triangulation {
+		
+		private Map<LocationOfNode, ArrayList<LocationOfNode>> neigbors;
+		
+		public Triangulation(Point_dt[] array) {
+			super(array);
+			neigbors = new HashMap<>();
+			updateNeighbors();
+		}
+
+		public Triangulation() {
+			super();
+			neigbors = new HashMap<>();
+		}
+
+		public ArrayList<LocationOfNode> getNeighbors(LocationOfNode l) {
+			
+			if (neigbors.size() == 0) {
+				throw new IllegalStateException("The triangulations hasn't been initialized");
+			}
+			return neigbors.get(l);
+		}
+		
+		public void updatePoint(LocationOfNode pointToDelete, LocationOfNode newPoint) {
+			super.deletePoint(pointToDelete);
+			addPoint(newPoint);
+			updateNeighbors();
+		}
+		
+		public void removePoint(LocationOfNode pointToDelete) {
+			super.deletePoint(pointToDelete);
+			updateNeighbors();
+		}
+		
+		public void addPoint(LocationOfNode p) {
+			super.insertPoint(p);
+			updateNeighbors();
+		}
+		
+		/**
+		 * gets called on every change in the network, so the neighbors are always accurate
+		 */
+		private void updateNeighbors() {
+			neigbors.clear();
+			Iterator<Triangle_dt> triangles = trianglesIterator();
+			Triangle_dt current = null;
+			while (triangles.hasNext()) {
+				current = triangles.next();
+				addNeighbor((LocationOfNode)current.p1(), (LocationOfNode)current.p2());
+				addNeighbor((LocationOfNode)current.p1(), (LocationOfNode)current.p3());
+				addNeighbor((LocationOfNode)current.p2(), (LocationOfNode)current.p1());
+				addNeighbor((LocationOfNode)current.p2(), (LocationOfNode)current.p3());
+				addNeighbor((LocationOfNode)current.p3(), (LocationOfNode)current.p1());
+				addNeighbor((LocationOfNode)current.p3(), (LocationOfNode)current.p2());
+			}
+		}
+		
+		private void addNeighbor(LocationOfNode point, LocationOfNode neighbor) {
+			ArrayList<LocationOfNode> tempList = neigbors.get(point);
+			if (tempList == null) {
+				tempList = new ArrayList<>();
+				neigbors.put(point, tempList);
+			}
+			if (!tempList.contains(neighbor)) {
+				tempList.add(neighbor);
+			}
+			
+		}
+		
+		public Vector<Triangle_dt> getTriangles() {
+			
+			Vector<Triangle_dt> triangles = new Vector<>();
+			Iterator<Triangle_dt> it = trianglesIterator();
+			while (it.hasNext()) {
+				triangles.add(it.next());
+			}
+			return triangles;
+		}
+	}
+	
+	public Vector<Triangle_dt> getTriangles() {
+		return triangulation.getTriangles();
 	}
 }
