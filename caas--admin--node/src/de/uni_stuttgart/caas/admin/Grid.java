@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.Vector;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -192,6 +193,10 @@ public class Grid {
 		return l.getLocationOfNode();
 	}
 	
+	/**
+	 * Extends the real triangulation to provide methods to access neighbors of nodes in a more or less efficient way
+	 * 
+	 */
 	private class Triangulation extends Delaunay_Triangulation {
 		
 		private Map<LocationOfNode, ArrayList<LocationOfNode>> neigbors;
@@ -231,6 +236,9 @@ public class Grid {
 			updateNeighbors();
 		}
 		
+		/**
+		 * gets called on every change in the network, so the neighbors are always accurate
+		 */
 		private void updateNeighbors() {
 			neigbors.clear();
 			Iterator<Triangle_dt> triangles = trianglesIterator();
@@ -244,7 +252,6 @@ public class Grid {
 				addNeighbor((LocationOfNode)current.p3(), (LocationOfNode)current.p1());
 				addNeighbor((LocationOfNode)current.p3(), (LocationOfNode)current.p2());
 			}
-			System.out.println("done");
 		}
 		
 		private void addNeighbor(LocationOfNode point, LocationOfNode neighbor) {
@@ -258,20 +265,19 @@ public class Grid {
 			}
 			
 		}
+		
+		public Vector<Triangle_dt> getTriangles() {
+			
+			Vector<Triangle_dt> triangles = new Vector<>();
+			Iterator<Triangle_dt> it = trianglesIterator();
+			while (it.hasNext()) {
+				triangles.add(it.next());
+			}
+			return triangles;
+		}
 	}
 	
-
-	public List<NodeInfo> getNodes() {
-		
-		List<NodeInfo> nodes = new ArrayList<>();
-		for (Entry<InetSocketAddress, NodeInfo> e : connectedNodes.entrySet()) {
-			nodes.add(e.getValue());
-		}
-		return nodes;
+	public Vector<Triangle_dt> getTriangles() {
+		return triangulation.getTriangles();
 	}
-
-//	public List<Segment> getSegments() {
-//		
-//		return (List<Segment>) triangulation.getSegments();
-//	}
 }

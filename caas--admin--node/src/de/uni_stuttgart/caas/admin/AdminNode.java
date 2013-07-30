@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Vector;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
@@ -312,8 +313,8 @@ public class AdminNode implements Runnable {
 		}
 	}
 	
-	public Delaunay_Triangulation getTriangulation() {
-		return grid.getTriangulation();
+	public Vector<Triangle_dt> getTriangles() {
+		return grid.getTriangles();
 	}
 
 }

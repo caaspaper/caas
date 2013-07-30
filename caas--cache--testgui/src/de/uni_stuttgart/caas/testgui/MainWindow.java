@@ -1,7 +1,5 @@
 package de.uni_stuttgart.caas.testgui;
 
-import gui.MyFrame;
-
 import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -264,22 +262,11 @@ public class MainWindow {
 		runTimeCommands.add(btnNewButton, gbc_btnNewButton);
 		runTimeCommands.add(btnNewButton_2, gbc_btnNewButton_2);
 
-		JButton btnNewButton_3 = new JButton("Triangulation");
 		JButton graphButton = new JButton("Network Graph");
 		GridBagConstraints gbc_btnNewButton_3 = new GridBagConstraints();
 		gbc_btnNewButton_3.insets = new Insets(0, 0, 5, 0);
 		gbc_btnNewButton_3.gridx = 0;
 		gbc_btnNewButton_3.gridy = 4;
-		btnNewButton_3.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				MyFrame win = new MyFrame(admin.getTriangulation());
-				win.start();
-			}
-		});
-		runTimeCommands.add(btnNewButton_3, gbc_btnNewButton_3);
-		graphButton.setEnabled(false);
 		graphButton.addActionListener(new ActionListener() {
 
 			@Override
@@ -295,7 +282,7 @@ public class MainWindow {
 					EventQueue.invokeLater(new Runnable() {
 						public void run() {
 							try {
-//								window = new NetworkGraph(admin.getNodes(), admin.getSegments());
+								window = new NetworkGraph(admin.getTriangles());
 								window.setVisible(true);
 							} catch (Exception e) {
 								e.printStackTrace();
