@@ -64,7 +64,9 @@ public class TriangulationDrawer {
 			
 			updateBoundingBox(p1);
 			updateBoundingBox(p2);
-			updateBoundingBox(p3);
+			if (p3 != null) {
+				updateBoundingBox(p3);
+			}
 		}
 	}
 	

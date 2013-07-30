@@ -73,7 +73,7 @@ public class Point_dt {
 	 * Sets the z coordinate.
 	 * @param z The new z coordinate.
 	 */
-	public void setZ(double Z) {
+	public void setZ(double z) {
 		this.z = z;
 	}
 
