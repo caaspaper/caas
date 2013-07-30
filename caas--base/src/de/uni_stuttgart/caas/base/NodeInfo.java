@@ -18,7 +18,7 @@ public class NodeInfo implements Serializable{
 	/**
 	 * Location of node
 	 */
-	private Point locationOfNode;
+	private LocationOfNode locationOfNode;
 
 	/**
 	 * Construct a new NodeInfo given the address of the node
@@ -39,7 +39,7 @@ public class NodeInfo implements Serializable{
 	 * @param locationOfNode
 	 *            Location of the node in the network
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, Point locationOfNode) {
+	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode) {
 		this(nodeAdress);
 		updateLocation(locationOfNode);
 	}
@@ -50,7 +50,7 @@ public class NodeInfo implements Serializable{
 	 * @param locationOfNode
 	 *            the new location of the node
 	 */
-	public void updateLocation(Point locationOfNode) {
+	public void updateLocation(LocationOfNode locationOfNode) {
 		this.locationOfNode = locationOfNode;
 	}
 
@@ -59,7 +59,7 @@ public class NodeInfo implements Serializable{
 	 * 
 	 * @return The location of the node
 	 */
-	public Point getLocationOfNode() {
+	public LocationOfNode getLocationOfNode() {
 		return locationOfNode;
 	}
 
