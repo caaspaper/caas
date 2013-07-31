@@ -52,9 +52,10 @@ public class TestGuiForm extends JFrame {
 
 		JScrollPane scrollPane = new JScrollPane(textArea);
 		scrollPane.setBounds(0, HEIGHT - 250, WIDTH, 250);
-		scrollPane
-				.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		getContentPane().add(scrollPane);
+
+		final JFrame outer = this;
 
 		//
 		JButton btn = new JButton("Launch Admin Node");
@@ -63,17 +64,15 @@ public class TestGuiForm extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				System.out.println("Launching Admin Node");
-				
-				Runnable r = new Runnable() {
-					
-					@Override
-					public void run() {
-						int numOfNodes = Integer.parseInt(adminCapacityField.getText());
-						new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
-					}
-				};
-				Thread t = new Thread(r);
-				t.start();
+
+				final int numOfNodes = Integer.parseInt(adminCapacityField.getText());
+				try {
+					new AdminNode(Integer.parseInt(adminPortField.getText()), numOfNodes);
+				} catch (NumberFormatException e1) {
+					JOptionPane.showMessageDialog(outer, "Failed to launch admin, invalid port", "Critical Error", JOptionPane.ERROR_MESSAGE);
+				} catch (IOException e1) {
+					JOptionPane.showMessageDialog(outer, "Failed to launch admin, could not start server", "Critical Error", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		});
 		btn.setBounds(WIDTH - 250, 100, 200, 50);
@@ -86,8 +85,7 @@ public class TestGuiForm extends JFrame {
 		NumberFormat intFormat = NumberFormat.getIntegerInstance();
 		intFormat.setGroupingUsed(false);
 
-		adminPortField = new ImprovedFormattedTextField(intFormat,
-				DEFAULT_ADMIN_PORT);
+		adminPortField = new ImprovedFormattedTextField(intFormat, DEFAULT_ADMIN_PORT);
 		adminPortField.setColumns(20);
 		adminPortField.setBounds(240, 100, 200, 30);
 		getContentPane().add(adminPortField);
@@ -96,17 +94,16 @@ public class TestGuiForm extends JFrame {
 		label.setBounds(30, 160, 200, 30);
 		getContentPane().add(label);
 
-		adminCapacityField = new ImprovedFormattedTextField(intFormat,
-				DEFAULT_CAPACITY);
+		adminCapacityField = new ImprovedFormattedTextField(intFormat, DEFAULT_CAPACITY);
 		adminCapacityField.setColumns(20);
 		adminCapacityField.setBounds(240, 160, 200, 30);
 		getContentPane().add(adminCapacityField);
-		
+
 		adminDebuggerCheckBox = new JCheckBox("Attach as debugger");
 		adminDebuggerCheckBox.setBounds(490, 160, 200, 30);
 		adminDebuggerCheckBox.setSelected(true);
 		getContentPane().add(adminDebuggerCheckBox);
-		
+
 		// node configuration
 
 		btn = new JButton("Launch Nodes Locally");
@@ -114,22 +111,24 @@ public class TestGuiForm extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("Launching " + numNodesField.getValue()
-						+ " local nodes");
-				
-				// CacheNode constructors wait for the admin to be available, so we have
-				// to start them on a separate thread that only serves to construct them.
+				System.out.println("Launching " + numNodesField.getValue() + " local nodes");
+
+				// CacheNode constructors wait for the admin to be available, so
+				// we have
+				// to start them on a separate thread that only serves to
+				// construct them.
 				// Once the CacheNode's are all constructed, it dies.
 				Runnable r = new Runnable() {
-					
+
 					@Override
 					public void run() {
 						int numOfNodes = Integer.parseInt(numNodesField.getText());
 						for (int i = 0; i < numOfNodes; i++) {
 							try {
-								final String[] cache_args = ipAdminField.getText().split(":"); 
-								//ipAdminField validation regex allows port to be optional
-								final String port = cache_args.length==2 ? cache_args[0] : adminPortField.getText();
+								final String[] cache_args = ipAdminField.getText().split(":");
+								// ipAdminField validation regex allows port to
+								// be optional
+								final String port = cache_args.length == 2 ? cache_args[0] : adminPortField.getText();
 								new CacheNode(cache_args[0], Integer.parseInt(port));
 							} catch (IOException e1) {
 								e1.printStackTrace();
@@ -158,11 +157,8 @@ public class TestGuiForm extends JFrame {
 		getContentPane().add(label);
 
 		NumberFormat ipFormat = NumberFormat.getIntegerInstance();
-		ipAdminField = new ImprovedFormattedTextField(new RegexFormatter(
-				Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
-						+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
+		ipAdminField = new ImprovedFormattedTextField(new RegexFormatter(Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\."
+				+ "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." + "([01]?\\d\\d?|2[0-4]\\d|25[0-5])(:\\d{4,5})?$")));
 
 		ipAdminField.setValue(DEFAULT_ADMIN_IP + ":" + DEFAULT_ADMIN_PORT);
 
