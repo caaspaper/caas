@@ -4,17 +4,19 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Vector;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
-import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
+import delaunay_triangulation.Delaunay_Triangulation;
+import delaunay_triangulation.Triangle_dt;
 
 /**
  * AdminNode
@@ -29,7 +31,6 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * 
  */
 public class AdminNode /* implements AutoClosable */{
-
 	boolean sentActivate = false;
 
 	/** Current state of the admin node */
@@ -54,7 +55,6 @@ public class AdminNode /* implements AutoClosable */{
 	private Grid grid = null;
 
 	private CountDownLatch activationCountDown;
-
 	private final Thread acceptingThread;
 	private ServerSocket serverSocket;
 
@@ -318,7 +318,12 @@ public class AdminNode /* implements AutoClosable */{
 		return new ActivateNodeMessage();
 	}
 
-	/**
+	
+	public Vector<Triangle_dt> getTriangles() {
+		return grid.getTriangles();
+	}
+	
+	/*	 
 	 * Shutdown the admin node, aborting all open connections to nodes
 	 */
 	public void close() {

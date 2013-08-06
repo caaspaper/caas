@@ -2,49 +2,31 @@ package de.uni_stuttgart.caas.base;
 
 import java.io.Serializable;
 
-import delaunay.Point;
+public class LocationOfNode implements Serializable {
 
-public class LocationOfNode implements Point, Serializable {
-
-	private double x;
-	private double y;
+	public final Integer x, y;
 	
-	
-	@Override
-	public int getIX() {
-		return (int) x;
-	}
-
-	@Override
-	public int getIY() {;
-		return (int) y;
-	}
-
-	@Override
-	public double getX() {
-		return x;
-	}
-
-	@Override
-	public double getY() {
-		return y;
-	}
-
-	@Override
-	public void setLocation(double x, double y) {
-		
-		this.x = x;
-		this.y = y;
-
-	}
-	
-	public LocationOfNode (double x, double y) {
-		setLocation(x, y);
+	public LocationOfNode (int x, int y) {
+		this.x =  x;
+		this.y =  y;
 	}
 	
 	@Override
 	public String toString() {
 		return "(" + x + ", " + y + ")";
+	}
+	
+	@Override
+	public int hashCode() {
+		return x.hashCode() + y.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if (o instanceof LocationOfNode) {
+			return ((LocationOfNode) o).x.equals(x) && ((LocationOfNode) o).y.equals(y);
+		}
+		return false;
 	}
 
 }

@@ -2,6 +2,7 @@ package de.uni_stuttgart.caas.messages;
 
 import java.util.Collection;
 
+import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import delaunay.Point;
 
@@ -13,7 +14,7 @@ public class AddToGridMessage implements IMessage{
 	/**
 	 * Location of the node, the message is sent to
 	 */
-	public final Point locationOfNode;
+	public final LocationOfNode locationOfNode;
 	
 	/**
 	 * Information about neighboring nodes
@@ -26,7 +27,7 @@ public class AddToGridMessage implements IMessage{
 	 * @param neighboringNodes
 	 *            a collection of neighboring nodes
 	 */
-	public AddToGridMessage(Point locationOfNode, Collection<NodeInfo> neighboringNodes) {
+	public AddToGridMessage(LocationOfNode locationOfNode, Collection<NodeInfo> neighboringNodes) {
 		
 		this.locationOfNode = locationOfNode;
 		this.neighboringNodes = neighboringNodes;

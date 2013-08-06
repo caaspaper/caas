@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.TreeSet;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
+import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.*;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
@@ -24,7 +25,7 @@ public class CacheNode {
 	/**
 	 * position of this node
 	 */
-	private Point position;
+	private LocationOfNode position;
 
 	/**
 	 * reference rest of data TODO
