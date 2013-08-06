@@ -49,7 +49,7 @@ public class MainWindow {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					MainWindow window = new MainWindow();			
+					MainWindow window = new MainWindow();
 					window.redirectSystemStreams();
 					window.frame.setVisible(true);
 				} catch (Exception e) {
@@ -121,7 +121,11 @@ public class MainWindow {
 
 					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
 					int port = Integer.parseInt(adminPortField.getText());
-					admin = new AdminNode(port, numOfNodes);
+					try {
+						admin = new AdminNode(port, numOfNodes);
+					} catch (IOException e) {
+						JOptionPane.showMessageDialog(frame, "Admin could not start", "error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 		});
@@ -148,7 +152,7 @@ public class MainWindow {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				if (admin != null) {
-					admin.shutDownSystem();
+					admin.close();
 					admin = null;
 				}
 				System.exit(0);
