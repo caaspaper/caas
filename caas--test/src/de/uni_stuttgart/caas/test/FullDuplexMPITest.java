@@ -111,7 +111,7 @@ public class FullDuplexMPITest {
 
 					FullDuplexMPI party0 = null;
 					try {
-						party0 = new FullDuplexMPI(sock0, System.out) {
+						party0 = new FullDuplexMPI(sock0, System.out, true) {
 
 							@Override
 							public IMessage processIncomingMessage(IMessage message) {
@@ -151,7 +151,7 @@ public class FullDuplexMPITest {
 		try {
 			sock1.bind(new InetSocketAddress("localhost", port1));
 			sock1.connect(new InetSocketAddress("localhost", port0));
-			party1 = new FullDuplexMPI(sock1, System.out) {
+			party1 = new FullDuplexMPI(sock1, System.out, true) {
 
 				@Override
 				public IMessage processIncomingMessage(IMessage message) {

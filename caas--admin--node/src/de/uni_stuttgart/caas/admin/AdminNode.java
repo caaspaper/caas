@@ -158,10 +158,12 @@ public class AdminNode /* implements AutoClosable */{
 		 * @throws IOException
 		 */
 		public NodeConnector(Socket cS) throws IOException {
-			super(cS, System.out);
+			super(cS, System.out, false);
 
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS.getRemoteSocketAddress();
+			
+			start();
 		}
 
 		@Override

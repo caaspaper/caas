@@ -65,16 +65,16 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 		 *            non-null response to the message
 		 */
 		void onResponseReceived(IMessage response);
-		
-		
-		/** Called if the connection is aborted and therefore no further
-		 *  response is to be expected. 
-		 *  
-		 *  This happens iff either close() is called on the connection,
-		 *  or a network error occurs (i.e. the other party closes the
-		 *  connection), in which case the current connection end point
-		 *  remains in an error state (see isErrorState).
-		 *  */
+
+		/**
+		 * Called if the connection is aborted and therefore no further response
+		 * is to be expected.
+		 * 
+		 * This happens iff either close() is called on the connection, or a
+		 * network error occurs (i.e. the other party closes the connection), in
+		 * which case the current connection end point remains in an error state
+		 * (see isErrorState).
+		 * */
 		void onConnectionAborted();
 	}
 
@@ -89,10 +89,17 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 *            non-null PrintStream instance that receives any error messages
 	 *            or exception stack traces that occur during operation of the
 	 *            FullDuplexMPI instance.
+	 * @param autoStart
+	 *            Specifies whether the connection starts processing commands
+	 *            immediately, which requires that the implementation needs to
+	 *            prepared to receive processIncomingMessage() calls before or
+	 *            while their own constructor code executes. If this parameter
+	 *            is set to false, the implementation must call start() to begin
+	 *            processing messages.
 	 * @throws IOException
 	 *             upon failure to setup the full duplex connection.
 	 */
-	public FullDuplexMPI(Socket socket, PrintStream errorOutStream) throws IOException {
+	protected FullDuplexMPI(Socket socket, PrintStream errorOutStream, boolean autoStart) throws IOException {
 		assert socket != null;
 		assert errorOutStream != null;
 
@@ -101,6 +108,29 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 
 		writeQueue = new LinkedBlockingQueue<OutgoingMessage>();
 		pendingSentMessages = new ConcurrentHashMap<Integer, OutgoingMessage>();
+
+		if (autoStart) {
+			start();
+		}
+	}
+
+	/**
+	 * Starts processing messages.
+	 * 
+	 * No callbacks on processIncomingMessage() are received before this is
+	 * called.
+	 * 
+	 * The method may only be called once, and it must be called before any
+	 * other method on the FullDuplexMPI object is invoked.
+	 * 
+	 * This is invoked automatically by the constructor unless the `autoStart`
+	 * parameter is set to false.
+	 * 
+	 * @throws IOException
+	 *             upon failure to setup the full duplex connection.
+	 */
+	protected void start() throws IOException {
+		assert writer == null && reader == null;
 
 		// Start both reader and writer threads, forward any exceptions to the
 		// caller. The writer thread needs to be started first: creating object
@@ -120,12 +150,12 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 			throw new IOException("(FullDuplexMPI) failed to start reader thread", e);
 		}
 	}
-	
+
 	/**
 	 * Check if the connection is in an irrecoverable error state.
 	 * 
-	 * This occurs iff a network error occurs, or if the other party
-	 * abandons the connection.
+	 * This occurs if a network error occurs, or if the other party abandons the
+	 * connection.
 	 * 
 	 * @return
 	 */
@@ -147,7 +177,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 * Calling close() on an already-closed instance is a no-op.
 	 */
 	public void close() {
-		if(isShuttingDown) {
+		if (isShuttingDown) {
 			return;
 		}
 
@@ -217,8 +247,8 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 */
 	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse) {
 		assert message != null;
-		if(errorState) {
-			if(futureResponse != null) {
+		if (errorState) {
+			if (futureResponse != null) {
 				futureResponse.onConnectionAborted();
 			}
 			return;
@@ -349,7 +379,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 			while (!isShuttingDown) {
 				try {
 					MessageEnvelope envelope;
-					
+
 					try {
 						envelope = readMessageEnvelope();
 					} catch (IOException e) {
@@ -358,7 +388,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 						close();
 						break;
 					}
-				
+
 					final OutgoingMessage message = pendingSentMessages.get((Integer) envelope.uid);
 					if (message == null) {
 						// there is no entry for this message, so it is not a
@@ -392,9 +422,9 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 					assert isShuttingDown;
 				}
 			}
-			
+
 			// abort all pending messages
-			for(Map.Entry<Integer, OutgoingMessage> entry : pendingSentMessages.entrySet()) {
+			for (Map.Entry<Integer, OutgoingMessage> entry : pendingSentMessages.entrySet()) {
 				if (entry.getValue().handler != null) {
 					entry.getValue().handler.onConnectionAborted();
 				}
@@ -478,9 +508,9 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 					assert isShuttingDown;
 				}
 			}
-			
+
 			// abort all not yet sent messages
-			for(OutgoingMessage entry : writeQueue) {
+			for (OutgoingMessage entry : writeQueue) {
 				if (entry.handler != null) {
 					entry.handler.onConnectionAborted();
 				}
@@ -500,7 +530,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 				outStream.println("(FullDuplexMPI) Failure writing object, connection lost or other network failure");
 				outStream.println(e.getMessage());
 				e.printStackTrace(outStream);
-				
+
 				// shutdown with error flag set
 				errorState = true;
 				close();
