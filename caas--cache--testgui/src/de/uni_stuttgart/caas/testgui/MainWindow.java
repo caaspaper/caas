@@ -79,15 +79,16 @@ public class MainWindow {
 		frame.getContentPane().add(createInputOptionsPanel(), BorderLayout.NORTH);
 		frame.getContentPane().add(createRuntimePanel(), BorderLayout.CENTER);
 
-		frame.pack();
+		createMenuBar();
 		
-		frame.setJMenuBar(createMenuBar());
+		frame.pack();
 	}
 
-	private JMenuBar createMenuBar() {
+	/**
+	 * Creates a MenuBar and adds it to the frame
+	 */
+	private void createMenuBar() {
 		JMenuBar menuBar = new JMenuBar();
-		
-		
 		
 		JMenu actions = new JMenu("Actions");
 		JMenu views = new JMenu("Views");
@@ -105,8 +106,6 @@ public class MainWindow {
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
 		views.add(networkGraph);
-		
-		
 		
 		startAdmin.addActionListener(new ActionListener() {
 
@@ -129,6 +128,7 @@ public class MainWindow {
 				}
 			}
 		});
+		
 		startCacheNodes.addActionListener(new ActionListener() {
 
 			@Override
@@ -147,6 +147,7 @@ public class MainWindow {
 				}
 			}
 		});
+		
 		exit.addActionListener(new ActionListener() {
 
 			@Override
@@ -158,6 +159,7 @@ public class MainWindow {
 				System.exit(0);
 			}
 		});
+		
 		networkGraph.addActionListener(new ActionListener() {
 			
 			@Override
@@ -182,8 +184,8 @@ public class MainWindow {
 				}
 			}
 		});
-		
-		return menuBar;
+
+		frame.setJMenuBar(menuBar);
 	}
 
 	/**
