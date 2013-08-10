@@ -168,6 +168,7 @@ public class AdminNode /* implements AutoClosable */{
 
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
+			System.out.println("admin received: " + message.getMessageType());
 			switch (message.getMessageType()) {
 			case CONFIRM:
 				break;
@@ -215,6 +216,7 @@ public class AdminNode /* implements AutoClosable */{
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
 				// now send back messages to cache nodes
+				System.out.println("admin sending grid");
 				sendMessageAsync(addNodeToGrid(clientAddress), new IResponseHandler() {
 
 					@Override
@@ -237,7 +239,7 @@ public class AdminNode /* implements AutoClosable */{
 					System.out.println("interrupted while waiting to activate node, not responding");
 					e.printStackTrace();
 				}
-
+				System.out.println("admin sending activate");
 				sendMessageAsync(activateNode());
 			}
 		}

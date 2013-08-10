@@ -92,9 +92,11 @@ public class MainWindow {
 		
 		JMenu actions = new JMenu("Actions");
 		JMenu views = new JMenu("Views");
+		JMenu remoteActions = new JMenu("Remote Actions");
 		
 		menuBar.add(actions);
 		menuBar.add(views);
+		menuBar.add(remoteActions);
 		
 		JMenuItem startAdmin = new JMenuItem("Start admin");
 		JMenuItem startCacheNodes = new JMenuItem("Start cache nodes");
@@ -106,6 +108,9 @@ public class MainWindow {
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
 		views.add(networkGraph);
+		
+		JMenuItem startRemoteSimulation = new JMenuItem("Start remote simulation");
+		remoteActions.add(startRemoteSimulation);
 		
 		startAdmin.addActionListener(new ActionListener() {
 
@@ -184,7 +189,48 @@ public class MainWindow {
 				}
 			}
 		});
-
+		
+		startRemoteSimulation.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				int numOfNodes = getNumberOfNodes();
+				
+				// start admin
+				try {
+					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				numOfNodes /= 4;
+				
+				try {
+					Runtime.getRuntime().exec("sh /export/elb/startSimulation.sh " + numOfNodes);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			
+			private int getNumberOfNodes() {
+				
+				String input = null;
+				int number = 0;
+				while (input == null || input.isEmpty()) {
+					input = JOptionPane.showInputDialog(frame, "the number of nodes to start (has to be divisible by four)");
+					try {
+						number = Integer.parseInt(input);
+						if (number < 0 || number > 64 || number % 4 != 0) {
+							input = null;
+						}
+					} catch (NumberFormatException e) {
+						input = null;
+					}
+				}
+				return number;
+			}
+		});
+		
 		frame.setJMenuBar(menuBar);
 	}
 
