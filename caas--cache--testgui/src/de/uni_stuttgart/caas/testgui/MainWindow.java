@@ -7,7 +7,9 @@ import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.FlowLayout;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
@@ -192,21 +194,39 @@ public class MainWindow {
 			
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				int numOfNodes = getNumberOfNodes();
 				
-				// start admin
-				try {
-					admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				numOfNodes /= 4;
-				
-				try {
-					Runtime.getRuntime().exec("sh /export/elb/startSimulation.sh " + numOfNodes);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				Thread t = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						try {
+						int numOfNodes = getNumberOfNodes();
+						
+						// start admin
+						try {
+							admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						numOfNodes /= 4;
+						Process cmdProc = Runtime.getRuntime().exec("sh /export/elb/startSimulation.sh " + numOfNodes);
+						BufferedReader stdoutReader = new BufferedReader(
+						         new InputStreamReader(cmdProc.getInputStream()));
+						String line;
+						while ((line = stdoutReader.readLine()) != null) {
+//							System.out.println(line);
+						}
+
+						BufferedReader stderrReader = new BufferedReader(new InputStreamReader(cmdProc.getErrorStream()));
+						while ((line = stderrReader.readLine()) != null) {
+						   System.out.println(line);
+						}
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+				t.start();
 			}
 			
 			
