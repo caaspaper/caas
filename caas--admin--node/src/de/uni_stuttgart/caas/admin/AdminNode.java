@@ -6,7 +6,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
@@ -15,7 +14,6 @@ import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
-import delaunay_triangulation.Delaunay_Triangulation;
 import delaunay_triangulation.Triangle_dt;
 
 /**
@@ -168,6 +166,7 @@ public class AdminNode /* implements AutoClosable */{
 
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
+			System.out.println("admin received: " + message.getMessageType());
 			switch (message.getMessageType()) {
 			case CONFIRM:
 				break;
@@ -215,6 +214,7 @@ public class AdminNode /* implements AutoClosable */{
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
 				// now send back messages to cache nodes
+				System.out.println("admin sending grid");
 				sendMessageAsync(addNodeToGrid(clientAddress), new IResponseHandler() {
 
 					@Override
@@ -237,7 +237,7 @@ public class AdminNode /* implements AutoClosable */{
 					System.out.println("interrupted while waiting to activate node, not responding");
 					e.printStackTrace();
 				}
-
+				System.out.println("admin sending activate");
 				sendMessageAsync(activateNode());
 			}
 		}

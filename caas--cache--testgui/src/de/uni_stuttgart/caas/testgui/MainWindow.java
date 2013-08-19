@@ -7,7 +7,9 @@ import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.FlowLayout;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
@@ -92,9 +94,11 @@ public class MainWindow {
 		
 		JMenu actions = new JMenu("Actions");
 		JMenu views = new JMenu("Views");
+		JMenu remoteActions = new JMenu("Remote Actions");
 		
 		menuBar.add(actions);
 		menuBar.add(views);
+		menuBar.add(remoteActions);
 		
 		JMenuItem startAdmin = new JMenuItem("Start admin");
 		JMenuItem startCacheNodes = new JMenuItem("Start cache nodes");
@@ -106,6 +110,9 @@ public class MainWindow {
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
 		views.add(networkGraph);
+		
+		JMenuItem startRemoteSimulation = new JMenuItem("Start remote simulation");
+		remoteActions.add(startRemoteSimulation);
 		
 		startAdmin.addActionListener(new ActionListener() {
 
@@ -137,8 +144,6 @@ public class MainWindow {
 				int numOfNodes = Integer.parseInt(numNodesField.getText());
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
-						final String[] cache_args = addressOfAdminField.getText().split(":"); 
-						final String port = cache_args.length==2 ? cache_args[1] : adminPortField.getText();
 						new CacheNode(addressOfAdminField.getText(), Integer.parseInt(adminPortField.getText()));
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
@@ -184,7 +189,66 @@ public class MainWindow {
 				}
 			}
 		});
+		
+		startRemoteSimulation.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				
+				Thread t = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						try {
+						int numOfNodes = getNumberOfNodes();
+						
+						// start admin
+						try {
+							admin = new AdminNode(DEFAULT_ADMIN_PORT, numOfNodes);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						numOfNodes /= 4;
+						Process cmdProc = Runtime.getRuntime().exec("sh /export/elb/startSimulation.sh " + numOfNodes);
+						BufferedReader stdoutReader = new BufferedReader(
+						         new InputStreamReader(cmdProc.getInputStream()));
+						String line;
+						while ((line = stdoutReader.readLine()) != null) {
+//							System.out.println(line);
+						}
 
+						BufferedReader stderrReader = new BufferedReader(new InputStreamReader(cmdProc.getErrorStream()));
+						while ((line = stderrReader.readLine()) != null) {
+						   System.out.println(line);
+						}
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				});
+				t.start();
+			}
+			
+			
+			private int getNumberOfNodes() {
+				
+				String input = null;
+				int number = 0;
+				while (input == null || input.isEmpty()) {
+					input = JOptionPane.showInputDialog(frame, "the number of nodes to start (has to be divisible by four)");
+					try {
+						number = Integer.parseInt(input);
+						if (number < 0 || number > 64 || number % 4 != 0) {
+							input = null;
+						}
+					} catch (NumberFormatException e) {
+						input = null;
+					}
+				}
+				return number;
+			}
+		});
+		
 		frame.setJMenuBar(menuBar);
 	}
 

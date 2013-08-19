@@ -2,7 +2,6 @@ package de.uni_stuttgart.caas.base;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
-import delaunay.Point;
 
 /**
  * Class representing information about a node, that is stored by neighboring
