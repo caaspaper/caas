@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.TreeSet;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
@@ -51,7 +52,7 @@ public class CacheNode {
 	 * 
 	 * @param addr
 	 *            the address of the admin node
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public CacheNode(InetSocketAddress addr) throws IOException {
 		if (addr.isUnresolved()) {
@@ -66,9 +67,9 @@ public class CacheNode {
 		} catch (IOException e) {
 			throw new IOException("Could not connect to server", e);
 		}
-		
+
 		connectionToAdmin.sendMessageAsync(new JoinMessage(), new IResponseHandler() {
-			
+
 			@Override
 			public void onResponseReceived(IMessage response) {
 				process(response);
@@ -143,12 +144,12 @@ public class CacheNode {
 			if (type != MessageType.CONFIRM) {
 				System.out.println("Error in Protocol");
 			}
-			ConfirmationMessage confirm = (ConfirmationMessage)message;
+			ConfirmationMessage confirm = (ConfirmationMessage) message;
 			if (confirm.STATUS_CODE != 0) {
 				System.out.println("cache node: failure, reveived message was: " + confirm.MESSAGE);
 				// not so graceful shutdown
 				close();
-				return null;				
+				return null;
 			}
 			currentState = CacheNodeState.AWAITING_DATA;
 			break;
@@ -183,10 +184,12 @@ public class CacheNode {
 
 	/**
 	 * Process an AddToGridMessage adding neighbor info and own location
-	 * @param message the AddToGridMessage
+	 * 
+	 * @param message
+	 *            the AddToGridMessage
 	 */
 	private void proccessAddToGridMessage(AddToGridMessage message) {
-		
+
 		this.position = message.locationOfNode;
 		addNeighboringNodes(message.getNeighboringNodes());
 	}
@@ -195,7 +198,7 @@ public class CacheNode {
 	 * Used to stop an active cache node
 	 */
 	public void close() {
-		if(currentState == CacheNodeState.DEAD) {
+		if (currentState == CacheNodeState.DEAD) {
 			return;
 		}
 		System.out.println("cache node: shutting down");
@@ -233,12 +236,78 @@ public class CacheNode {
 			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
 		}
 
-
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
 			final IMessage response = process(message);
 			assert response != null;
 			return response;
+		}
+
+		/**
+		 * Method that processes the queries it receives and forwards them to
+		 * the right neighbor
+		 */
+		public void processQuery() {
+
+			assert currentState == CacheNodeState.ACTIVE;
+			
+			// TODO make sure queryLocation has the proper value
+			LocationOfNode queryLocation = null;
+			NodeInfo closestNodeToQuery = null, tempNode;
+			
+			Iterator<NodeInfo> iterator = neighboringNodes.iterator();
+			closestNodeToQuery = iterator.next();
+			
+			// initialize minimum distance with distance between location of
+			// this node and the query.
+			double minDistance = calculateDistance(position, queryLocation), tempDistance;
+			while (iterator.hasNext()) {
+				tempNode = iterator.next();
+				tempDistance = calculateDistance(tempNode, null);
+				if (tempDistance < minDistance) {
+					minDistance = tempDistance;
+					closestNodeToQuery = tempNode;
+				}
+			}
+			
+			if (minDistance < calculateDistance(position, queryLocation)) {
+				// TODO forward query to closestNodeToQuery
+			} else {
+
+				/*
+				 * TODO process node locally if the current load is to high,
+				 * send query to a close neighbor
+				 */
+			}
+		}
+
+		/**
+		 * Helper method to calculate the distance between a queryLocation and a
+		 * CacheNode center
+		 * 
+		 * @param node
+		 *            the cacheNode
+		 * @param queryLocation
+		 *            the queryLocation
+		 * @return the distance between the node and the location of the query
+		 */
+		private double calculateDistance(NodeInfo node, LocationOfNode queryLocation) {
+
+			return calculateDistance(node.getLocationOfNode(), queryLocation);
+		}
+
+		/**
+		 * Helper method to calculate the distance between to points
+		 * 
+		 * @param a
+		 *            first point
+		 * @param b
+		 *            second point
+		 * @return the distance between the two points
+		 */
+		private double calculateDistance(LocationOfNode a, LocationOfNode b) {
+
+			return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 		}
 	}
 
