@@ -72,10 +72,9 @@ public class NodeInfo implements Serializable{
 	@Override
 	public boolean equals(Object o) {
 		if (o != null && o instanceof NodeInfo) {
-			return this.NODE_ADDRESS == ((NodeInfo) o).NODE_ADDRESS;
+			return this.NODE_ADDRESS.equals(((NodeInfo) o).NODE_ADDRESS);
 		}
 		return false;
-
 	}
 	
 	@Override
