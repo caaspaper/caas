@@ -28,7 +28,12 @@ public interface IMessage extends Serializable{
 		/**
 		 * sent to confirm another message or an action
 		 */
-		CONFIRM
+		CONFIRM,
+		
+		/**
+		 * Message containing query information and maybe even the actual query from the client
+		 */
+		QUERY_MESSAGE
 	}
 
 	/**
