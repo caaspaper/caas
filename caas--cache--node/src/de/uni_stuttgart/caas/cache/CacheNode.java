@@ -169,6 +169,7 @@ public class CacheNode {
 				System.out.println("Error in Protocol");
 			}
 			currentState = CacheNodeState.ACTIVE;
+			onActivate();
 			return new ConfirmationMessage(0, "cache node is now active");
 
 		case ACTIVE:
@@ -180,6 +181,12 @@ public class CacheNode {
 		}
 
 		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
+	}
+	
+	private void onActivate() {
+		for(NodeInfo info : neighboringNodes) {
+			//new NeighborConnector();
+		}
 	}
 
 	/**
@@ -217,6 +224,29 @@ public class CacheNode {
 	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodes) {
 
 		neighboringNodes.addAll(neighboringNodes);
+	}
+	
+	/**
+	 * Handles communication with neighboring nodes
+	 */
+	private class NeighborConnector extends FullDuplexMPI {
+
+		/**
+		 * Construct a new neighbor connector pipe.
+		 * 
+		 * @param address
+		 *            the address of the admin node to connect to
+		 * @throws IOException
+		 *             if the Socket can't be created, pass the error up
+		 */
+		public NeighborConnector(InetSocketAddress address) throws IOException {
+			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
+		}
+
+		@Override
+		public IMessage processIncomingMessage(IMessage message) {
+			return null;
+		}
 	}
 
 	/**
