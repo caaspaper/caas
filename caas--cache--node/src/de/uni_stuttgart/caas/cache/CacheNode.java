@@ -12,7 +12,6 @@ import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.*;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
-import delaunay.Point;
 
 /**
  * Class representing the cache node
@@ -273,72 +272,94 @@ public class CacheNode {
 			return response;
 		}
 
-		/**
-		 * Method that processes the queries it receives and forwards them to
-		 * the right neighbor
-		 */
-		public void processQuery() {
+	}
+	
+	
+	/**
+	 * Method that processes the queries it receives and forwards them to
+	 * the right neighbor
+	 */
+	public void processQuery(QueryMessage message) {
 
-			assert currentState == CacheNodeState.ACTIVE;
-			
-			// TODO make sure queryLocation has the proper value
-			LocationOfNode queryLocation = null;
-			NodeInfo closestNodeToQuery = null, tempNode;
-			
-			Iterator<NodeInfo> iterator = neighboringNodes.iterator();
-			closestNodeToQuery = iterator.next();
-			
-			// initialize minimum distance with distance between location of
-			// this node and the query.
-			double minDistance = calculateDistance(position, queryLocation), tempDistance;
-			while (iterator.hasNext()) {
-				tempNode = iterator.next();
-				tempDistance = calculateDistance(tempNode, null);
-				if (tempDistance < minDistance) {
-					minDistance = tempDistance;
-					closestNodeToQuery = tempNode;
-				}
-			}
-			
-			if (minDistance < calculateDistance(position, queryLocation)) {
-				// TODO forward query to closestNodeToQuery
-			} else {
-
-				/*
-				 * TODO process node locally if the current load is to high,
-				 * send query to a close neighbor
-				 */
+		assert currentState == CacheNodeState.ACTIVE;
+		
+		// TODO make sure queryLocation has the proper value
+		LocationOfNode queryLocation = null;
+		NodeInfo closestNodeToQuery = null, tempNode;
+		
+		Iterator<NodeInfo> iterator = neighboringNodes.iterator();
+		closestNodeToQuery = iterator.next();
+		
+		// initialize minimum distance with distance between location of
+		// this node and the query.
+		double minDistance = calculateDistance(position, queryLocation), tempDistance;
+		while (iterator.hasNext()) {
+			tempNode = iterator.next();
+			tempDistance = calculateDistance(tempNode, null);
+			if (tempDistance < minDistance) {
+				minDistance = tempDistance;
+				closestNodeToQuery = tempNode;
 			}
 		}
+		
+		if (minDistance < calculateDistance(position, queryLocation)) {
+			// TODO forward query to closestNodeToQuery
+		} else {
 
-		/**
-		 * Helper method to calculate the distance between a queryLocation and a
-		 * CacheNode center
-		 * 
-		 * @param node
-		 *            the cacheNode
-		 * @param queryLocation
-		 *            the queryLocation
-		 * @return the distance between the node and the location of the query
-		 */
-		private double calculateDistance(NodeInfo node, LocationOfNode queryLocation) {
-
-			return calculateDistance(node.getLocationOfNode(), queryLocation);
+			/*
+			 * TODO process node locally if the current load is to high,
+			 * send query to a close neighbor
+			 */
+			
+			processQueryLocally(message);
 		}
+	}
 
-		/**
-		 * Helper method to calculate the distance between to points
-		 * 
-		 * @param a
-		 *            first point
-		 * @param b
-		 *            second point
-		 * @return the distance between the two points
-		 */
-		private double calculateDistance(LocationOfNode a, LocationOfNode b) {
-
-			return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+	
+	/**
+	 * This method processes the query on this node.
+	 * Since we are not really serving the cache,
+	 * we can simulate the cache by sleeping for some time
+	 * TODO DO NOT SLEEP REPLACE WITH GETTING THE DATA FROM THE CACHE
+	 * @param message 
+	 */
+	private void processQueryLocally(QueryMessage message) {
+		
+		try {
+			Thread.sleep(50);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Helper method to calculate the distance between a queryLocation and a
+	 * CacheNode center
+	 * 
+	 * @param node
+	 *            the cacheNode
+	 * @param queryLocation
+	 *            the queryLocation
+	 * @return the distance between the node and the location of the query
+	 */
+	private double calculateDistance(NodeInfo node, LocationOfNode queryLocation) {
+
+		return calculateDistance(node.getLocationOfNode(), queryLocation);
+	}
+
+	/**
+	 * Helper method to calculate the distance between to points
+	 * 
+	 * @param a
+	 *            first point
+	 * @param b
+	 *            second point
+	 * @return the distance between the two points
+	 */
+	private double calculateDistance(LocationOfNode a, LocationOfNode b) {
+
+		return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
 	}
 
 	/**
