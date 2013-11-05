@@ -1,11 +1,14 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.TreeSet;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -17,10 +20,22 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * Class representing the cache node
  */
 public class CacheNode {
+	
+	/**
+	 * Number of connections per second allowed before the node starts tasking neighbors with the query
+	 */
+	public final int MAX_QUERIES_PER_SECOND = 20;
+	
 
 	/**
 	 * reference to the actual cache TODO
 	 */
+	
+	/**
+	 * List containing timestamps of the last requests
+	 * to calculate the load on the cache node
+	 */
+	private volatile LinkedBlockingQueue<Long> queryProcessTimes;
 
 	/**
 	 * position of this node
@@ -234,6 +249,7 @@ public class CacheNode {
 		public AdminConnector(InetSocketAddress address) throws IOException {
 			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
 		}
+		
 
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
@@ -253,8 +269,7 @@ public class CacheNode {
 
 		assert currentState == CacheNodeState.ACTIVE;
 		
-		// TODO make sure queryLocation has the proper value
-		LocationOfNode queryLocation = null;
+		LocationOfNode queryLocation = message.QUERY_LOCATION;
 		NodeInfo closestNodeToQuery = null, tempNode;
 		
 		Iterator<NodeInfo> iterator = neighboringNodes.iterator();
@@ -280,11 +295,27 @@ public class CacheNode {
 			 * TODO process node locally if the current load is to high,
 			 * send query to a close neighbor
 			 */
-			
-			processQueryLocally(message);
+			if (getLoad() > 1) {
+				
+			} else {
+				processQueryLocally(message);
+			}
 		}
 	}
-
+	
+	/**
+	 * Processes an incoming query from outside the network and wraps it's information into a QueryMessage that is used internally
+	 * @param query the actual query
+	 */
+	public void processIncomingQueryToAdaptItToNetwork(Object query) {
+		
+		
+		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random()* 2000000000);
+		QueryMessage newMessage  = new QueryMessage(randomLocation, new InetSocketAddress(connectionToAdmin.getLocalAddress(), 5000), -1);
+		
+		processQuery(newMessage);
+	}
+	
 	
 	/**
 	 * This method processes the query on this node.
@@ -295,10 +326,12 @@ public class CacheNode {
 	 */
 	private void processQueryLocally(QueryMessage message) {
 		
+		// remember the message's time of processing so we can calculate the load
+		queryProcessTimes.add(System.currentTimeMillis());
+		
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -331,6 +364,29 @@ public class CacheNode {
 
 		return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
 	}
+	
+	/**
+	 * Calculates the load of the cache node
+	 * A higher value means a higher load
+	 * 
+	 * NOTE: when the calculation changes, processQuery() has to be changed accordingly!!!
+	 * 
+	 * @return a double representing the load
+	 */
+	public double getLoad() {
+		
+		long currentTime = System.currentTimeMillis();
+		
+		while (!queryProcessTimes.isEmpty()) {
+			if (currentTime - queryProcessTimes.peek() > 1000) {
+				queryProcessTimes.poll();
+			} else {
+				break;
+			}
+		}
+		return queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
+	}
+	
 
 	/**
 	 * For starting the cacheNode from the command line
