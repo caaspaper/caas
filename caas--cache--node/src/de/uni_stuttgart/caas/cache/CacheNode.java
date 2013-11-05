@@ -1,14 +1,12 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.TreeSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
@@ -332,7 +330,6 @@ public class CacheNode {
 		assert currentState == CacheNodeState.ACTIVE;
 		
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
-		// TODO make sure queryLocation has the proper value
 		Entry<NodeInfo, NeighborConnector> closestNodeToQuery = null, tempNode;
 		
 		Iterator<Entry<NodeInfo, NeighborConnector>> iterator = neighborConnectors.entrySet().iterator();
@@ -351,7 +348,18 @@ public class CacheNode {
 		}
 		
 		if (minDistance < calculateDistance(position, queryLocation)) {
-			// TODO forward query to closestNodeToQuery
+			closestNodeToQuery.getValue().sendMessageAsync(message, new IResponseHandler() {
+				
+				@Override
+				public void onResponseReceived(IMessage response) {
+					// everything allright
+				}
+				
+				@Override
+				public void onConnectionAborted() {
+					// Something went wrong here
+				}
+			});
 		} else {
 
 			/*
