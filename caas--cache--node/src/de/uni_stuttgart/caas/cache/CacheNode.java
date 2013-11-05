@@ -5,10 +5,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.TreeSet;
 import java.util.concurrent.LinkedBlockingQueue;
-
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -49,7 +50,7 @@ public class CacheNode {
 	/**
 	 * neighboring nodes
 	 */
-	private TreeSet<NodeInfo> neighboringNodes;
+	private HashMap<NodeInfo, NeighborConnector> neighborConnectors;
 
 	/**
 	 * current state - volatile because it is read and written to concurrently.
@@ -119,7 +120,7 @@ public class CacheNode {
 		currentState = CacheNodeState.AWAITING_DATA;
 		return new JoinMessage();
 	}
-
+	
 	/**
 	 * Add a new neighboring node
 	 * 
@@ -128,8 +129,9 @@ public class CacheNode {
 	 */
 	private void addNeighbor(NodeInfo newNode) {
 
-		if (!neighboringNodes.contains(newNode)) {
-			neighboringNodes.add(newNode);
+		if (!neighborConnectors.containsKey(newNode)) {
+			neighborConnectors.put(newNode, null);
+			// TODO: establish a connection with that node
 		}
 	}
 
@@ -140,8 +142,10 @@ public class CacheNode {
 	 *            The node to remove
 	 */
 	private void removeNeighbor(NodeInfo node) {
-		neighboringNodes.remove(node);
+		neighborConnectors.remove(node);
+		// TODO: kill connection with that node
 	}
+	
 
 	public IMessage process(IMessage message) {
 		if (currentState == CacheNodeState.DEAD) {
@@ -166,7 +170,7 @@ public class CacheNode {
 				return null;
 			}
 			currentState = CacheNodeState.AWAITING_DATA;
-			break;
+			return null;
 
 		case AWAITING_DATA:
 
@@ -183,7 +187,7 @@ public class CacheNode {
 				System.out.println("Error in Protocol");
 			}
 			currentState = CacheNodeState.ACTIVE;
-			return new ConfirmationMessage(0, "cache node is now active");
+			return onActivate();
 
 		case ACTIVE:
 			// TODO what comes here?
@@ -195,6 +199,7 @@ public class CacheNode {
 
 		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
 	}
+	
 
 	/**
 	 * Process an AddToGridMessage adding neighbor info and own location
@@ -228,9 +233,67 @@ public class CacheNode {
 	 * @param collection
 	 *            A collection of Information about neighboring nodes
 	 */
-	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodes) {
+	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodesSource) {
+		// store nodes for now. Later, in onActivate(), we establish connections to them
+		neighborConnectors = new HashMap<>();
+		for(NodeInfo info : neighboringNodesSource) {
+			neighborConnectors.put(info,null);
+		}
+	}
+	
 
-		neighboringNodes.addAll(neighboringNodes);
+	
+	/**
+	 * Called upon activation of the cache node. At this point, all
+	 * neighboring nodes know about each other and are ready to
+	 * connect.
+	 */
+	private IMessage onActivate() {
+		HashMap<NodeInfo, NeighborConnector> newMap = new HashMap<>();
+		for(NodeInfo info : neighborConnectors.keySet()) {
+			try {
+				newMap.put(info, new NeighborConnector(info.NODE_ADDRESS));
+			} catch (IOException e) {
+				e.printStackTrace();
+				final String msg = "failed to connect to neighbor: " + info.NODE_ADDRESS;
+				System.out.println("cache node: " + msg);
+				return new ConfirmationMessage(-5, msg);
+			}
+		}
+		neighborConnectors = newMap;
+		return new ConfirmationMessage(0, "cache node is now active and connected to neighbors"); 
+	}
+	
+	
+	/**
+	 * Handles communication with neighboring nodes
+	 */
+	private class NeighborConnector extends FullDuplexMPI {
+
+		/**
+		 * Construct a new neighbor connector pipe.
+		 * 
+		 * @param address
+		 *            the address of the admin node to connect to
+		 * @throws IOException
+		 *             if the Socket can't be created, pass the error up
+		 */
+		public NeighborConnector(InetSocketAddress address) throws IOException {
+			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
+		}
+
+		@Override
+		public IMessage processIncomingMessage(IMessage message) {
+			if(message.getMessageType() == MessageType.QUERY_MESSAGE) {
+				processQuery((QueryMessage)message);
+			}
+			else {
+				// TODO: use logger
+				System.out.println("cache node: unexpected neighbor message, reveived message was: " 
+						+ message.getMessageType());
+			}
+			return null;
+		}
 	}
 
 	/**
@@ -249,7 +312,6 @@ public class CacheNode {
 		public AdminConnector(InetSocketAddress address) throws IOException {
 			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
 		}
-		
 
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
@@ -270,9 +332,10 @@ public class CacheNode {
 		assert currentState == CacheNodeState.ACTIVE;
 		
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
-		NodeInfo closestNodeToQuery = null, tempNode;
+		// TODO make sure queryLocation has the proper value
+		Entry<NodeInfo, NeighborConnector> closestNodeToQuery = null, tempNode;
 		
-		Iterator<NodeInfo> iterator = neighboringNodes.iterator();
+		Iterator<Entry<NodeInfo, NeighborConnector>> iterator = neighborConnectors.entrySet().iterator();
 		closestNodeToQuery = iterator.next();
 		
 		// initialize minimum distance with distance between location of
@@ -280,7 +343,7 @@ public class CacheNode {
 		double minDistance = calculateDistance(position, queryLocation), tempDistance;
 		while (iterator.hasNext()) {
 			tempNode = iterator.next();
-			tempDistance = calculateDistance(tempNode, null);
+			tempDistance = calculateDistance(tempNode.getKey(), queryLocation);
 			if (tempDistance < minDistance) {
 				minDistance = tempDistance;
 				closestNodeToQuery = tempNode;
