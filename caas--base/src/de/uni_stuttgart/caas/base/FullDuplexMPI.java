@@ -6,6 +6,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -298,6 +300,11 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 *         message. Messages with no response are not allowed.
 	 */
 	public abstract IMessage processIncomingMessage(IMessage message);
+	
+	
+	public InetAddress getLocalAddress() {
+		return clientSocket.getLocalAddress();
+	}
 
 	// ---------------------------------
 	// Implementation
