@@ -1,6 +1,7 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Collection;
@@ -49,6 +50,16 @@ public class CacheNode {
 	 * neighboring nodes
 	 */
 	private HashMap<NodeInfo, NeighborConnector> neighborConnectors;
+	
+	/**
+	 * Sockets to Query requests that have to be answered
+	 */
+	private HashMap<Integer, Socket> unansweredRequests;
+	
+	/**
+	 * Counter for ids for unanswered requests
+	 */
+	private int counter = -1;
 
 	/**
 	 * current state - volatile because it is read and written to concurrently.
@@ -93,6 +104,7 @@ public class CacheNode {
 				System.out.println("cache node: connection to admin was closed");
 			}
 		});
+		unansweredRequests = new HashMap<>();
 	}
 
 	/**
@@ -284,8 +296,9 @@ public class CacheNode {
 		public IMessage processIncomingMessage(IMessage message) {
 			if(message.getMessageType() == MessageType.QUERY_MESSAGE) {
 				processQuery((QueryMessage)message);
-			}
-			else {
+			} else if (message.getMessageType() == MessageType.QUERY_RESULT) {
+				sendResultToClient((QueryResult) message);
+			} else {
 				// TODO: use logger
 				System.out.println("cache node: unexpected neighbor message, reveived message was: " 
 						+ message.getMessageType());
@@ -348,18 +361,7 @@ public class CacheNode {
 		}
 		
 		if (minDistance < calculateDistance(position, queryLocation)) {
-			closestNodeToQuery.getValue().sendMessageAsync(message, new IResponseHandler() {
-				
-				@Override
-				public void onResponseReceived(IMessage response) {
-					// everything allright
-				}
-				
-				@Override
-				public void onConnectionAborted() {
-					// Something went wrong here
-				}
-			});
+			closestNodeToQuery.getValue().sendMessageAsync(message);
 		} else {
 
 			/*
@@ -378,11 +380,13 @@ public class CacheNode {
 	 * Processes an incoming query from outside the network and wraps it's information into a QueryMessage that is used internally
 	 * @param query the actual query
 	 */
-	public void processIncomingQueryToAdaptItToNetwork(Object query) {
+	public void processIncomingQueryToAdaptItToNetwork(Object query, Socket client) {
 		
 		
 		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random()* 2000000000);
-		QueryMessage newMessage  = new QueryMessage(randomLocation, new InetSocketAddress(connectionToAdmin.getLocalAddress(), 5000), -1);
+		QueryMessage newMessage  = new QueryMessage(randomLocation, new InetSocketAddress(connectionToAdmin.getLocalAddress(), 5000), ++counter);
+		
+		unansweredRequests.put(newMessage.ID, client);
 		
 		processQuery(newMessage);
 	}
@@ -405,6 +409,34 @@ public class CacheNode {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		message.appendToDebuggingInfo("Node " + position + ": processed Locally");
+		
+		try {
+			NeighborConnector c = new NeighborConnector(message.ENTRY_NODE);
+			c.sendMessageAsync(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	
+	private void sendResultToClient(QueryResult message) {
+		
+		Socket s = unansweredRequests.remove(message.ID);
+		if (s == null) {
+			//TODO serious error!
+		} else {
+			try {
+				PrintWriter writer = new PrintWriter(s.getOutputStream());
+				writer.write(message.getDebuggingInfo());
+				writer.flush();
+				writer.close();
+				s.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 	}
 
 	/**

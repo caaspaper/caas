@@ -33,7 +33,12 @@ public interface IMessage extends Serializable{
 		/**
 		 * Message containing query information and maybe even the actual query from the client
 		 */
-		QUERY_MESSAGE
+		QUERY_MESSAGE,
+		
+		/**
+		 * Message containing the result of a query
+		 */
+		QUERY_RESULT
 	}
 
 	/**

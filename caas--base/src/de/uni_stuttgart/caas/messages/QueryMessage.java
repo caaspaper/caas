@@ -35,6 +35,12 @@ public class QueryMessage implements IMessage {
 	private boolean allowPropagationThroughNetwork = true;
 	
 	
+	/**
+	 * For debugging
+	 */
+	private String debuggingInfo = "";
+	
+	
 	public QueryMessage(LocationOfNode l, InetSocketAddress node, int id) {
 		QUERY_LOCATION = l;
 		ENTRY_NODE = node;
@@ -52,6 +58,14 @@ public class QueryMessage implements IMessage {
 	
 	public boolean isPropagtionThroughNetworkAllowed() {
 		return allowPropagationThroughNetwork;
+	}
+	
+	public void appendToDebuggingInfo(String s) {
+		debuggingInfo += s + "\n";
+	}
+	
+	public String getDebuggingInfo() {
+		return debuggingInfo;
 	}
 
 }

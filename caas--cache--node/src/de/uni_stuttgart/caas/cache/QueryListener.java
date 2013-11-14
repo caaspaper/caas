@@ -75,13 +75,12 @@ public class QueryListener implements Runnable {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					if (!line.equals("STOP")) {
-						cacheNode.processIncomingQueryToAdaptItToNetwork(null);
+						cacheNode.processIncomingQueryToAdaptItToNetwork(null, clientSocket);
 					} else {
 						break;
 					}
 				}
 				reader.close();
-				clientSocket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
