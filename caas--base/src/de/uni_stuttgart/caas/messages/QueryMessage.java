@@ -1,6 +1,6 @@
 package de.uni_stuttgart.caas.messages;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
 
@@ -17,16 +17,14 @@ public class QueryMessage implements IMessage {
 	public final LocationOfNode QUERY_LOCATION;
 	
 	/**
-	 * The address of the node that initially processed the query
-	 * this node will have to send the response back
+	 * IP address of the client
 	 */
-	public final InetSocketAddress ENTRY_NODE;
+	public final String CLIENT_IP;
 	
 	/**
-	 * The id is for matching a query to a response, 
-	 * this id has to be unique for a single cacheNode
+	 * Port the client is listening on
 	 */
-	public final int ID;
+	public final int CLIENT_PORT;
 	
 	/**
 	 * If the load of the node that is supposed to process the message is to high
@@ -41,10 +39,10 @@ public class QueryMessage implements IMessage {
 	private String debuggingInfo = "";
 	
 	
-	public QueryMessage(LocationOfNode l, InetSocketAddress node, int id) {
+	public QueryMessage(LocationOfNode l, String ip, int port) {
 		QUERY_LOCATION = l;
-		ENTRY_NODE = node;
-		ID = id;
+		CLIENT_IP = ip;
+		CLIENT_PORT = port;
 	}
 	
 	@Override

@@ -1,11 +1,14 @@
 package de.uni_stuttgart.caas.admin;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+
+import de.uni_stuttgart.caas.messages.QueryMessage;
+import de.uni_stuttgart.caas.messages.QueryResult;
 
 public class QuerySender {
 
@@ -33,39 +36,42 @@ public class QuerySender {
 			this.port = port;
 			(new Thread(this)).start();
 		}
-
+		
 		@Override
 		public void run() {
-			BufferedReader reader = null;
-			PrintWriter writer = null;
-			Socket server;
-			
 			
 			
 			try {
-				server = new Socket(host, port);
-				reader = new BufferedReader(new InputStreamReader(server.getInputStream()));
-				writer = new PrintWriter(server.getOutputStream());
-				writer.write("\n");
-				writer.flush();
+				Socket server = new Socket(host, port);
 				
-				String response;
-				while ((response = reader.readLine()) != null) {
-					if (response.equals("END")) {
-						
-					} else {
-						
-					}
+				// 0 for a random port
+				ServerSocket receiverSocket = new ServerSocket(0);
+				ObjectOutputStream out = new ObjectOutputStream(server.getOutputStream());
+				out.writeObject(receiverSocket.getInetAddress().getHostAddress());
+				out.writeObject(receiverSocket.getLocalPort());
+				out.close();
+				
+				
+				Socket client = receiverSocket.accept();
+				// out only needed so we can create the inputStreamReader
+				out = new ObjectOutputStream(client.getOutputStream());
+				ObjectInputStream in = new ObjectInputStream(client.getInputStream());
+				Object o = in.readObject();
+				if (o instanceof QueryResult) {
+					System.out.println(((QueryResult) o).getDebuggingInfo());
+				} else {
+					System.err.println("FATAL ERROR");
 				}
-				
-				reader.close();
-				writer.close();
 				server.close();
+				client.close();
+				in.close();
+				out.close();
+				receiverSocket.close();
 			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
 		}

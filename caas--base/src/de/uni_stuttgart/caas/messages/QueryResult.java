@@ -3,13 +3,11 @@ package de.uni_stuttgart.caas.messages;
 public class QueryResult implements IMessage {
 
 	
-	public final int ID;
 	
 	private String debuggingInfo;
 	
 	
-	public QueryResult(int ID, String debuggingInfo) {
-		this.ID = ID;
+	public QueryResult(String debuggingInfo) {
 		this.debuggingInfo = debuggingInfo;
 	}
 	

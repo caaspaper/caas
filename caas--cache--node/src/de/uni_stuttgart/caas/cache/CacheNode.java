@@ -1,14 +1,16 @@
 package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -26,11 +28,6 @@ public class CacheNode {
 	 */
 	public final int MAX_QUERIES_PER_SECOND = 20;
 	
-
-	/**
-	 * reference to the actual cache TODO
-	 */
-	
 	/**
 	 * List containing timestamps of the last requests
 	 * to calculate the load on the cache node
@@ -43,23 +40,9 @@ public class CacheNode {
 	private LocationOfNode position;
 
 	/**
-	 * reference rest of data TODO
-	 */
-
-	/**
 	 * neighboring nodes
 	 */
 	private HashMap<NodeInfo, NeighborConnector> neighborConnectors;
-	
-	/**
-	 * Sockets to Query requests that have to be answered
-	 */
-	private HashMap<Integer, Socket> unansweredRequests;
-	
-	/**
-	 * Counter for ids for unanswered requests
-	 */
-	private int counter = -1;
 
 	/**
 	 * current state - volatile because it is read and written to concurrently.
@@ -102,9 +85,8 @@ public class CacheNode {
 			@Override
 			public void onConnectionAborted() {
 				System.out.println("cache node: connection to admin was closed");
-			}
+			};
 		});
-		unansweredRequests = new HashMap<>();
 	}
 
 	/**
@@ -296,8 +278,6 @@ public class CacheNode {
 		public IMessage processIncomingMessage(IMessage message) {
 			if(message.getMessageType() == MessageType.QUERY_MESSAGE) {
 				processQuery((QueryMessage)message);
-			} else if (message.getMessageType() == MessageType.QUERY_RESULT) {
-				sendResultToClient((QueryResult) message);
 			} else {
 				// TODO: use logger
 				System.out.println("cache node: unexpected neighbor message, reveived message was: " 
@@ -369,7 +349,7 @@ public class CacheNode {
 			 * send query to a close neighbor
 			 */
 			if (getLoad() > 1) {
-				
+				System.out.println("Load exeeded allowed value");
 			} else {
 				processQueryLocally(message);
 			}
@@ -380,14 +360,11 @@ public class CacheNode {
 	 * Processes an incoming query from outside the network and wraps it's information into a QueryMessage that is used internally
 	 * @param query the actual query
 	 */
-	public void processIncomingQueryToAdaptItToNetwork(Object query, Socket client) {
+	public void processIncomingQueryToAdaptItToNetwork(Object query, String ip, int port) {
 		
 		
 		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random()* 2000000000);
-		QueryMessage newMessage  = new QueryMessage(randomLocation, new InetSocketAddress(connectionToAdmin.getLocalAddress(), 5000), ++counter);
-		
-		unansweredRequests.put(newMessage.ID, client);
-		
+		QueryMessage newMessage  = new QueryMessage(randomLocation, ip, port);		
 		processQuery(newMessage);
 	}
 	
@@ -411,32 +388,26 @@ public class CacheNode {
 		}
 		message.appendToDebuggingInfo("Node " + position + ": processed Locally");
 		
-		try {
-			NeighborConnector c = new NeighborConnector(message.ENTRY_NODE);
-			c.sendMessageAsync(message);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		sendResultToClient(message);
 	}
 	
 	
-	private void sendResultToClient(QueryResult message) {
+	private void sendResultToClient(QueryMessage message) {
 		
-		Socket s = unansweredRequests.remove(message.ID);
-		if (s == null) {
-			//TODO serious error!
-		} else {
-			try {
-				PrintWriter writer = new PrintWriter(s.getOutputStream());
-				writer.write(message.getDebuggingInfo());
-				writer.flush();
-				writer.close();
-				s.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		try {
+			Socket client = new Socket(message.CLIENT_IP, message.CLIENT_PORT);
+			
+			ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
+			
+			out.writeObject(new QueryResult(message.getDebuggingInfo()));
+			
+			out.close();
+			client.close();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		
 	}
 
 	/**

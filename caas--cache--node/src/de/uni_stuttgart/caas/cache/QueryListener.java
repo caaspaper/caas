@@ -1,8 +1,8 @@
 package de.uni_stuttgart.caas.cache;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -10,16 +10,14 @@ public class QueryListener implements Runnable {
 
 	private CacheNode cacheNode;
 	private ServerSocket serverSocket;
-	private boolean isRunning;
+	private Thread t;
 	
 	public QueryListener(CacheNode cacheNode, int port) {
 		
 		this.cacheNode = cacheNode;
 		try {
 			serverSocket = new ServerSocket(port);
-			serverSocket.setSoTimeout(1000);
-			isRunning = true;
-			
+			serverSocket.setSoTimeout(1000);			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -27,15 +25,15 @@ public class QueryListener implements Runnable {
 
 	@Override
 	public void run() {
-		
-		Socket clientSocket;
-		while (isRunning) {
+		t = Thread.currentThread();
+		Socket clientSocket = null;
+		while (!t.isInterrupted() || clientSocket != null && !clientSocket.isClosed()) {
 			
 			try {
 				clientSocket = serverSocket.accept();
-				new Thread(new ListenerThread(cacheNode, clientSocket)).start();
+				new Thread(new ListenerThread(clientSocket)).start();
 			} catch (IOException e) {
-				e.printStackTrace();
+				
 			}
 			
 		}
@@ -50,7 +48,12 @@ public class QueryListener implements Runnable {
 	 * Stops the server
 	 */
 	public void stop() {
-		isRunning = false;
+		t.interrupt();
+		try {
+			t.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	
@@ -60,30 +63,45 @@ public class QueryListener implements Runnable {
 	 */
 	private class ListenerThread implements Runnable{
 		
-		private CacheNode cacheNode;
 		private Socket clientSocket;
 		
-		public ListenerThread(CacheNode cacheNode, Socket clientSocket) {
-			this.cacheNode = cacheNode;
+		public ListenerThread(Socket clientSocket) {
 			this.clientSocket = clientSocket;
 		}
 
 		@Override
 		public void run() {
 			try {
-				BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					if (!line.equals("STOP")) {
-						cacheNode.processIncomingQueryToAdaptItToNetwork(null, clientSocket);
-					} else {
-						break;
-					}
+				// out not used, but needed for inputStream
+				ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+				ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+				String ip = "";
+				int port = 0;
+				Object o = in.readObject();
+				if (o instanceof String) {
+					ip = (String) o;
+				} else {
+					System.err.println("FATAL ERROR");
 				}
-				reader.close();
+				o = in.readObject();
+				if (o instanceof Integer) {
+					port = (int) o;
+				} else {
+					System.err.println("FATAL ERROR");
+				}
+				processQuery(null, ip, port);
+				out.close();
+				in.close();
+				clientSocket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-			}
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} 
+		}
+		
+		protected void processQuery(Object o, String ip, int port) {
+			cacheNode.processIncomingQueryToAdaptItToNetwork(null, ip, port);
 		}
 	}
 }
