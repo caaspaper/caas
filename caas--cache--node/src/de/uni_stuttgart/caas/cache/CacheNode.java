@@ -2,6 +2,7 @@ package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
 import java.util.HashMap;
@@ -67,6 +68,11 @@ public class CacheNode {
 	 * Logger
 	 */
 	private LogSender logger;
+	
+	/**
+	 * ServerSocket for connections with other CacheNodes
+	 */
+	private ServerSocket serverSocket;
 
 	/**
 	 * Construct a new cache node given the address of the admin node
@@ -84,6 +90,9 @@ public class CacheNode {
 		}
 
 		logger.write("Cache node started");
+		
+		// bind it to a random port since more than one CacheNode might reside on the same Computer
+		serverSocket = new ServerSocket(0);
 
 		try {
 			connectionToAdmin = new AdminConnector(addr);
@@ -91,7 +100,7 @@ public class CacheNode {
 			throw new IOException("Could not connect to server", e);
 		}
 
-		connectionToAdmin.sendMessageAsync(new JoinMessage(), new IResponseHandler() {
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort())), new IResponseHandler() {
 
 			@Override
 			public void onResponseReceived(IMessage response) {
@@ -116,17 +125,6 @@ public class CacheNode {
 	public CacheNode(String host, int port) throws IOException {
 
 		this(new InetSocketAddress(host, port));
-	}
-
-	/**
-	 * initialize node and generate JOIN-Message
-	 * 
-	 * @return The newly generated JOIN-Message
-	 */
-	public IMessage initializeNode() {
-
-		currentState = CacheNodeState.AWAITING_DATA;
-		return new JoinMessage();
 	}
 	
 	/**
@@ -257,18 +255,18 @@ public class CacheNode {
 	 * connect.
 	 */
 	private IMessage onActivate() {
-//		HashMap<NodeInfo, NeighborConnector> newMap = new HashMap<>();
-//		for(NodeInfo info : neighborConnectors.keySet()) {
-//			try {
-//				newMap.put(info, new NeighborConnector(info.NODE_ADDRESS));
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//				final String msg = "failed to connect to neighbor: " + info.NODE_ADDRESS;
-//				System.out.println("cache node: " + msg);
-//				return new ConfirmationMessage(-5, msg);
-//			}
-//		}
-//		neighborConnectors = newMap;
+		HashMap<NodeInfo, NeighborConnector> newMap = new HashMap<>();
+		for(NodeInfo info : neighborConnectors.keySet()) {
+			try {
+				newMap.put(info, new NeighborConnector(info.ADDRESS_FOR_CACHENODE_NODECONNECTOR));
+			} catch (IOException e) {
+				e.printStackTrace();
+				final String msg = "failed to connect to neighbor: " + info.ADDRESS_FOR_CACHENODE_NODECONNECTOR;
+				System.out.println("cache node: " + msg);
+				return new ConfirmationMessage(-5, msg);
+			}
+		}
+		neighborConnectors = newMap;
 		return new ConfirmationMessage(0, "cache node is now active and connected to neighbors"); 
 	}
 	

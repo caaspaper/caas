@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.Vector;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
+
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.LogSender;
@@ -15,6 +16,7 @@ import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
+import de.uni_stuttgart.caas.messages.JoinMessage;
 import delaunay_triangulation.Triangle_dt;
 
 /**
@@ -178,7 +180,11 @@ public class AdminNode /* implements AutoClosable */{
 				break;
 
 			case JOIN:
-				JoinRequest jr = new JoinRequest(clientAddress);
+				if (!(message instanceof JoinMessage)) {
+					logger.write("Received Message that should be a join message, but it wasn't");
+					System.exit(-1);
+				}
+				JoinRequest jr = new JoinRequest(clientAddress, ((JoinMessage)message).ADDRESS_FOR_CACHENODE_NODECONNECTOR);
 				assert jr != null;
 				final ConfirmationMessage response = respondToJoinRequest(jr);
 

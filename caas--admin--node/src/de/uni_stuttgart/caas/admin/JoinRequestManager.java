@@ -77,23 +77,22 @@ public class JoinRequestManager {
 		return joinRequests.size();
 	}
 	
-	public Queue<InetSocketAddress> getAddressesOfConnectedNodes() {
+	public List<JoinRequest> getJoinRequests() {
 		
-		Queue<InetSocketAddress> addresses = new LinkedList<>();
-		for (JoinRequest r : joinRequests) {
-			addresses.add(r.ADDRESS);
-		}
-		return addresses;
+		return joinRequests;
 	}
 
 	public static class JoinRequest {
 
-		public JoinRequest(InetSocketAddress address) {
+		public JoinRequest(InetSocketAddress address, InetSocketAddress nodeConnectorAddr) {
 			assert address != null;
 			ADDRESS = address;
+			NODECONNECTOR_ADDRESS = nodeConnectorAddr;
 		}
 
 		public final InetSocketAddress ADDRESS;
+		
+		public final InetSocketAddress NODECONNECTOR_ADDRESS;
 	}
 
 }
