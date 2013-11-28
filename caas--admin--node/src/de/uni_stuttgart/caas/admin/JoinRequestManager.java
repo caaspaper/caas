@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.Vector;
 
 /**
  * Keeps track of a wait list of nodes wishing to join the grid during its
@@ -80,7 +79,7 @@ public class JoinRequestManager {
 	
 	public Queue<InetSocketAddress> getAddressesOfConnectedNodes() {
 		
-		Queue addresses = new LinkedList<>();
+		Queue<InetSocketAddress> addresses = new LinkedList<>();
 		for (JoinRequest r : joinRequests) {
 			addresses.add(r.ADDRESS);
 		}

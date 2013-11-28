@@ -6,16 +6,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Vector;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
+import de.uni_stuttgart.caas.base.LogSender;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
-import delaunay_triangulation.Delaunay_Triangulation;
 import delaunay_triangulation.Triangle_dt;
 
 /**
@@ -31,7 +30,7 @@ import delaunay_triangulation.Triangle_dt;
  * 
  */
 public class AdminNode /* implements AutoClosable */{
-	boolean sentActivate = false;
+	private boolean sentActivate = false;
 
 	/** Current state of the admin node */
 	private AdminNodeState state;
@@ -57,6 +56,9 @@ public class AdminNode /* implements AutoClosable */{
 	private CountDownLatch activationCountDown;
 	private final Thread acceptingThread;
 	private ServerSocket serverSocket;
+	
+	
+	private LogSender logger;
 
 	/**
 	 * 
@@ -89,6 +91,9 @@ public class AdminNode /* implements AutoClosable */{
 	 */
 	public AdminNode(int portNumber, int initialCapacity) throws IOException {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
+		
+		
+		logger = new LogSender(new InetSocketAddress("localhost", 43215));
 
 		if (portNumber < 1024 || portNumber > 65536) {
 			throw new IllegalArgumentException();
@@ -109,7 +114,7 @@ public class AdminNode /* implements AutoClosable */{
 			serverSocket = new ServerSocket(PORT_NUMBER);
 			serverSocket.setReuseAddress(true);
 		} catch (IOException e) {
-			System.out.println("Could not listen on PORT_NUMBER");
+			logger.write("Could not listen on PORT_NUMBER");
 			e.printStackTrace();
 			throw e;
 		}
@@ -128,7 +133,7 @@ public class AdminNode /* implements AutoClosable */{
 						connectors.add(nc);
 
 					} catch (IOException e) {
-						System.out.println("Accept failed: PORT_NUMBER");
+						logger.write("Accept failed: PORT_NUMBER");
 						e.printStackTrace();
 						break;
 					}
@@ -226,7 +231,7 @@ public class AdminNode /* implements AutoClosable */{
 
 					@Override
 					public void onConnectionAborted() {
-						System.out.println("admin: connection to cache node was aborted");
+						logger.write("admin: connection to cache node was aborted");
 						// TODO: this is currently a dangling state
 					}
 				});
@@ -234,7 +239,7 @@ public class AdminNode /* implements AutoClosable */{
 				try {
 					activationCountDown.await();
 				} catch (InterruptedException e) {
-					System.out.println("interrupted while waiting to activate node, not responding");
+					logger.write("interrupted while waiting to activate node, not responding");
 					e.printStackTrace();
 				}
 
