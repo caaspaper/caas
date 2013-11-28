@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Vector;
 
+import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import delaunay_triangulation.Delaunay_Triangulation;
@@ -55,7 +57,7 @@ public class Grid {
 		numOfConnectedNodes = joinRequests.getNumberOfConnectedNodes();
 		connectedNodes = new HashMap<>(numOfConnectedNodes);
 		pointToAddressMapping = new HashMap<>();
-		distributeCacheNodesOnGrid(joinRequests.getAddressesOfConnectedNodes());
+		distributeCacheNodesOnGrid(joinRequests.getJoinRequests());
 
 		performNewTriangulation();
 	}
@@ -69,16 +71,16 @@ public class Grid {
 	 * hashmap assigning them a location on the grid
 	 * 
 	 */
-	private void distributeCacheNodesOnGrid(Queue<InetSocketAddress> addresses) {
+	private void distributeCacheNodesOnGrid(List<JoinRequest> joinRequests) {
 
 		LocationOfNode currentPoint = new LocationOfNode(0, 0);
 
-		for (InetSocketAddress addr : addresses) {
+		for (JoinRequest j : joinRequests) {
 			while (pointToAddressMapping
 					.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
 			}
-			connectedNodes.put(addr, new NodeInfo(addr, currentPoint));
-			pointToAddressMapping.put(currentPoint, addr);
+			connectedNodes.put(j.ADDRESS, new NodeInfo(j.ADDRESS, currentPoint, j.NODECONNECTOR_ADDRESS));
+			pointToAddressMapping.put(currentPoint, j.ADDRESS);
 		}
 	}
 
@@ -112,7 +114,7 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address is already
 	 */
-	public void addNewNode(InetSocketAddress address) {
+	public void addNewNode(InetSocketAddress address, InetSocketAddress nodeConnectorAddress) {
 
 		if (connectedNodes.containsKey(address)) {
 			throw new IllegalArgumentException("node already in triangulation");
@@ -120,7 +122,7 @@ public class Grid {
 		LocationOfNode currentPoint = null;
 		while (pointToAddressMapping.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
 		}
-		addNewNode(address, currentPoint);
+		addNewNode(address, currentPoint, nodeConnectorAddress);
 	}
 
 	/**
@@ -133,14 +135,14 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address or point are already in triangulation
 	 */
-	public void addNewNode(InetSocketAddress address, LocationOfNode p) {
+	public void addNewNode(InetSocketAddress address, LocationOfNode p, InetSocketAddress nodeConnectorAddress) {
 
 		if (connectedNodes.containsKey(address) || pointToAddressMapping.containsKey(p)) {
 			throw new IllegalArgumentException("Address or location of node are already in triangulation");
 		}
 
 		pointToAddressMapping.put(p, address);
-		connectedNodes.put(address, new NodeInfo(address, p));
+		connectedNodes.put(address, new NodeInfo(address, p, nodeConnectorAddress));
 		addPointToTriangulation(p);
 	}
 
@@ -174,7 +176,17 @@ public class Grid {
 
 		for (LocationOfNode p : triangulation.getNeighbors(pointOfNode)) {
 
-			infoOnNeighbors.add(new NodeInfo(pointToAddressMapping.get(p), p));
+			InetSocketAddress addr = pointToAddressMapping.get(p);
+			if (addr == null) {
+				System.out.println("FATAL ERROR, NODE NOT FOUND IN GRID");
+				System.exit(-1);
+			}
+			NodeInfo info = connectedNodes.get(addr);
+			if (info == null) {
+				System.out.println("FATAL ERROR NODE NOT FOUND IN GRID");
+				System.exit(-1);
+			}
+			infoOnNeighbors.add(info);
 		}
 		return infoOnNeighbors;
 	}

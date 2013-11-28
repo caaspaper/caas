@@ -3,6 +3,7 @@ package de.uni_stuttgart.caas.cache;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -14,6 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
+import de.uni_stuttgart.caas.base.LogSender;
 import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.*;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
@@ -27,6 +29,8 @@ public class CacheNode {
 	 * Number of connections per second allowed before the node starts tasking neighbors with the query
 	 */
 	public final int MAX_QUERIES_PER_SECOND = 20;
+
+	public static final int DEFAULT_LOG_RECEIVER_PORT = 43215;
 	
 	/**
 	 * List containing timestamps of the last requests
@@ -53,6 +57,21 @@ public class CacheNode {
 	 * Holds the connection to the admin node
 	 */
 	private AdminConnector connectionToAdmin;
+	
+	/**
+	 * Logger
+	 */
+	private LogSender logger;
+	
+	/**
+	 * ServerSocket for connections with other CacheNodes
+	 */
+	private ServerSocket serverSocket;
+	
+	/**
+	 * listens for new querys from clients
+	 */
+	private QueryListener queryListener;
 
 	/**
 	 * Construct a new cache node given the address of the admin node
@@ -62,20 +81,28 @@ public class CacheNode {
 	 * @throws IOException
 	 */
 	public CacheNode(InetSocketAddress addr) throws IOException {
+		
+		logger = new LogSender(new InetSocketAddress("localhost", DEFAULT_LOG_RECEIVER_PORT));
+		
 		if (addr.isUnresolved()) {
 			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
 
-		// System.out.println("cache node: connecting to " + addr.getAddress() +
-		// ":" + addr.getPort());
-
+		logger.write("Cache node started");
+		
+		// bind it to a random port since more than one CacheNode might reside on the same Computer
+		serverSocket = new ServerSocket(0);
+		queryListener = new QueryListener(this, logger);
+		(new Thread(queryListener)).start();
+		int port = queryListener.getPort();
+		logger.write("listening for queries on port" + port);
 		try {
 			connectionToAdmin = new AdminConnector(addr);
 		} catch (IOException e) {
 			throw new IOException("Could not connect to server", e);
 		}
 
-		connectionToAdmin.sendMessageAsync(new JoinMessage(), new IResponseHandler() {
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort())), new IResponseHandler() {
 
 			@Override
 			public void onResponseReceived(IMessage response) {
@@ -84,8 +111,8 @@ public class CacheNode {
 
 			@Override
 			public void onConnectionAborted() {
-				System.out.println("cache node: connection to admin was closed");
-			};
+				logger.write("cache node: connection to admin was closed");
+			}
 		});
 	}
 
@@ -100,17 +127,6 @@ public class CacheNode {
 	public CacheNode(String host, int port) throws IOException {
 
 		this(new InetSocketAddress(host, port));
-	}
-
-	/**
-	 * initialize node and generate JOIN-Message
-	 * 
-	 * @return The newly generated JOIN-Message
-	 */
-	public IMessage initializeNode() {
-
-		currentState = CacheNodeState.AWAITING_DATA;
-		return new JoinMessage();
 	}
 	
 	/**
@@ -146,17 +162,17 @@ public class CacheNode {
 
 		MessageType type = message.getMessageType();
 
-		System.out.println("cache node: received: " + type);
+		logger.write("cache node: received: " + type);
 
 		switch (currentState) {
 
 		case INITIAL_STATE:
 			if (type != MessageType.CONFIRM) {
-				System.out.println("Error in Protocol");
+				logger.write("Error in Protocol");
 			}
 			ConfirmationMessage confirm = (ConfirmationMessage) message;
 			if (confirm.STATUS_CODE != 0) {
-				System.out.println("cache node: failure, reveived message was: " + confirm.MESSAGE);
+				logger.write("cache node: failure, reveived message was: " + confirm.MESSAGE);
 				// not so graceful shutdown
 				close();
 				return null;
@@ -167,7 +183,7 @@ public class CacheNode {
 		case AWAITING_DATA:
 
 			if (type != MessageType.ADD_TO_GRID) {
-				System.out.println("Error in Protocol");
+				logger.write("Error in Protocol");
 			}
 			proccessAddToGridMessage((AddToGridMessage) message);
 			currentState = CacheNodeState.AWAITING_ACTIVATION;
@@ -176,7 +192,7 @@ public class CacheNode {
 		case AWAITING_ACTIVATION:
 
 			if (type != MessageType.ACTIVATE) {
-				System.out.println("Error in Protocol");
+				logger.write("Error in Protocol");
 			}
 			currentState = CacheNodeState.ACTIVE;
 			return onActivate();
@@ -186,7 +202,7 @@ public class CacheNode {
 			break;
 
 		default:
-			System.out.println("Error in Protocol");
+			logger.write("Error in Protocol");
 		}
 
 		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
@@ -229,7 +245,7 @@ public class CacheNode {
 		// store nodes for now. Later, in onActivate(), we establish connections to them
 		neighborConnectors = new HashMap<>();
 		for(NodeInfo info : neighboringNodesSource) {
-			neighborConnectors.put(info,null);
+			neighborConnectors.put(info, null);
 		}
 	}
 	
@@ -244,10 +260,11 @@ public class CacheNode {
 		HashMap<NodeInfo, NeighborConnector> newMap = new HashMap<>();
 		for(NodeInfo info : neighborConnectors.keySet()) {
 			try {
-				newMap.put(info, new NeighborConnector(info.NODE_ADDRESS));
+				newMap.put(info, new NeighborConnector(info.ADDRESS_FOR_CACHENODE_NODECONNECTOR));
+				logger.write("initialized nodeconnector");
 			} catch (IOException e) {
 				e.printStackTrace();
-				final String msg = "failed to connect to neighbor: " + info.NODE_ADDRESS;
+				final String msg = "failed to connect to neighbor: " + info.ADDRESS_FOR_CACHENODE_NODECONNECTOR;
 				System.out.println("cache node: " + msg);
 				return new ConfirmationMessage(-5, msg);
 			}
@@ -255,7 +272,6 @@ public class CacheNode {
 		neighborConnectors = newMap;
 		return new ConfirmationMessage(0, "cache node is now active and connected to neighbors"); 
 	}
-	
 	
 	/**
 	 * Handles communication with neighboring nodes
@@ -278,10 +294,9 @@ public class CacheNode {
 		public IMessage processIncomingMessage(IMessage message) {
 			if(message.getMessageType() == MessageType.QUERY_MESSAGE) {
 				processQuery((QueryMessage)message);
-			} else {
-				// TODO: use logger
-				System.out.println("cache node: unexpected neighbor message, reveived message was: " 
-						+ message.getMessageType());
+			}
+			else {
+				logger.write("cache node: unexpected neighbor message, reveived message was: " + message.getMessageType());
 			}
 			return null;
 		}
@@ -349,7 +364,7 @@ public class CacheNode {
 			 * send query to a close neighbor
 			 */
 			if (getLoad() > 1) {
-				System.out.println("Load exeeded allowed value");
+				logger.write("Load exeeded allowed value");
 			} else {
 				processQueryLocally(message);
 			}
@@ -365,6 +380,7 @@ public class CacheNode {
 		
 		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random()* 2000000000);
 		QueryMessage newMessage  = new QueryMessage(randomLocation, ip, port);		
+		logger.write("received new query from " + ip + ":" + port + " for " + randomLocation);
 		processQuery(newMessage);
 	}
 	

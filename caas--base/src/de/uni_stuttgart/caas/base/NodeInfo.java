@@ -2,7 +2,6 @@ package de.uni_stuttgart.caas.base;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
-import delaunay.Point;
 
 /**
  * Class representing information about a node, that is stored by neighboring
@@ -19,6 +18,11 @@ public class NodeInfo implements Serializable{
 	 * Location of node
 	 */
 	private LocationOfNode locationOfNode;
+	
+	/**
+	 * Address of the Socket the node is listening on
+	 */
+	public final InetSocketAddress ADDRESS_FOR_CACHENODE_NODECONNECTOR;
 
 	/**
 	 * Construct a new NodeInfo given the address of the node
@@ -26,8 +30,9 @@ public class NodeInfo implements Serializable{
 	 * @param nodeAdress
 	 *            The address of the node
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress) {
+	public NodeInfo(InetSocketAddress nodeAdress, InetSocketAddress nodeConnectorAddress) {
 		NODE_ADDRESS = nodeAdress;
+		ADDRESS_FOR_CACHENODE_NODECONNECTOR = nodeConnectorAddress;
 	}
 
 	/**
@@ -39,8 +44,8 @@ public class NodeInfo implements Serializable{
 	 * @param locationOfNode
 	 *            Location of the node in the network
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode) {
-		this(nodeAdress);
+	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode, InetSocketAddress nodeConnectorAddress) {
+		this(nodeAdress, nodeConnectorAddress);
 		updateLocation(locationOfNode);
 	}
 

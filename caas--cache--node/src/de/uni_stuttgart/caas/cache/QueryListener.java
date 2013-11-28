@@ -6,17 +6,21 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import de.uni_stuttgart.caas.base.LogSender;
+
 public class QueryListener implements Runnable {
 
 	private CacheNode cacheNode;
 	private ServerSocket serverSocket;
 	private Thread t;
+	private LogSender logger;
 	
-	public QueryListener(CacheNode cacheNode, int port) {
+	public QueryListener(CacheNode cacheNode, LogSender logger) {
 		
 		this.cacheNode = cacheNode;
+		this.logger = logger;
 		try {
-			serverSocket = new ServerSocket(port);
+			serverSocket = new ServerSocket(0);
 			serverSocket.setSoTimeout(1000);			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -31,6 +35,7 @@ public class QueryListener implements Runnable {
 			
 			try {
 				clientSocket = serverSocket.accept();
+				logger.write("client connected requesting data");
 				new Thread(new ListenerThread(clientSocket)).start();
 			} catch (IOException e) {
 				
@@ -101,7 +106,13 @@ public class QueryListener implements Runnable {
 		}
 		
 		protected void processQuery(Object o, String ip, int port) {
+			logger.write("giving request to CacheNode");
 			cacheNode.processIncomingQueryToAdaptItToNetwork(null, ip, port);
 		}
+	}
+
+
+	public int getPort() {
+		return serverSocket.getLocalPort();
 	}
 }

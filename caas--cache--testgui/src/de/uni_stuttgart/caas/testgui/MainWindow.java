@@ -1,8 +1,10 @@
 package de.uni_stuttgart.caas.testgui;
 
 import java.awt.EventQueue;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,6 +14,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
 import java.util.regex.Pattern;
+
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -21,7 +24,9 @@ import javax.swing.JTextArea;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+
 import de.uni_stuttgart.caas.admin.AdminNode;
+import de.uni_stuttgart.caas.base.LogReceiver;
 import de.uni_stuttgart.caas.cache.CacheNode;
 import de.uni_stuttgart.caas.testgui.ImprovedFormattedTextField;
 import de.uni_stuttgart.caas.testgui.RegexFormatter;
@@ -33,6 +38,7 @@ public class MainWindow {
 	private final short DEFAULT_ADMIN_PORT = AdminNode.DEFAULT_PORT_NUMBER;
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	private final int DEFAULT_CAPACITY = AdminNode.DEFAULT_INITIAL_CAPACITY;
+	public final int DEFAULT_LOG_RECEIVER_PORT = 43215;
 
 	private ImprovedFormattedTextField numNodesField;
 	private ImprovedFormattedTextField adminCapacityField;
@@ -41,6 +47,7 @@ public class MainWindow {
 	private JTextArea outputField;
 	private NetworkGraph window;
 	private AdminNode admin;
+	private LogReceiver receiver;
 
 	/**
 	 * Launch the application.
@@ -115,9 +122,11 @@ public class MainWindow {
 				if (admin != null) {
 					JOptionPane.showMessageDialog(frame, "Admin already started", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
-					System.out.println("launchind admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
+					// start the log receiver
+					receiver = new LogReceiver(DEFAULT_LOG_RECEIVER_PORT);
+					(new Thread(receiver)).start();
+					System.out.println("launching admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
-
 					int numOfNodes = Integer.parseInt(adminCapacityField.getText());
 					int port = Integer.parseInt(adminPortField.getText());
 					try {
@@ -155,7 +164,9 @@ public class MainWindow {
 				if (admin != null) {
 					admin.close();
 					admin = null;
+					receiver.stop();
 				}
+				
 				System.exit(0);
 			}
 		});
