@@ -6,21 +6,20 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-
-import de.uni_stuttgart.caas.messages.QueryMessage;
+import de.uni_stuttgart.caas.base.LogSender;
 import de.uni_stuttgart.caas.messages.QueryResult;
 
 public class QuerySender {
 
-	public static void generateRandomQuery(String host, int port, int numOfQueries) {
+	public static void generateRandomQuery(String host, int port, int numOfQueries, LogSender logger) {
 		for (int i = 0; i < numOfQueries; i++) {
-			new QueryRunner(host, port);
+			new QueryRunner(host, port, logger);
 		}
 	}
 	
 	
 	public static void main(String[] args) {
-		generateRandomQuery("localhost", 45530, 1);
+		generateRandomQuery("localhost", 45530, 1, new LogSender(null, false, false, true));
 	}
 }
 
@@ -28,11 +27,13 @@ class QueryRunner implements Runnable{
 	
 	public final String host;
 	public final int port;
+	private LogSender logger;
 	
-	public QueryRunner(String host, int port) {
+	public QueryRunner(String host, int port, LogSender logger) {
 		
 		this.host = host;
 		this.port = port;
+		this.logger = logger;
 		(new Thread(this)).start();
 	}
 	
@@ -56,9 +57,9 @@ class QueryRunner implements Runnable{
 			ObjectInputStream in = new ObjectInputStream(client.getInputStream());
 			Object o = in.readObject();
 			if (o instanceof QueryResult) {
-				System.out.println(((QueryResult) o).getDebuggingInfo());
+				logger.write("Client received: " + (((QueryResult) o).getDebuggingInfo()));
 			} else {
-				System.err.println("FATAL ERROR");
+				logger.write("Client didn't receive QueryResult but some other Object");
 			}
 			server.close();
 			client.close();
