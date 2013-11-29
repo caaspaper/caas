@@ -377,4 +377,15 @@ public class AdminNode /* implements AutoClosable */{
 		});	
 		t.start();
 	}
+	
+	public void generateQueriesUniformlyDistributedEnteringAtOneLocation(final int numOfQueriesPerNode) {
+		Thread t = new Thread (new Runnable() {
+			
+			@Override
+			public void run() {
+				QuerySender.generateUniformlyDistributedQueriesEnteringAtOneLocation(numOfQueriesPerNode, grid.getConnectedNodes(), logger);
+			}
+		});
+		t.start();
+	}
 }

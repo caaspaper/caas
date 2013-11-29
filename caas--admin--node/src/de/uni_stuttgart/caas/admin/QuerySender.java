@@ -52,9 +52,41 @@ public class QuerySender {
 			}
 			counter = 0;
 		}
-
+	}
+	
+	public static void generateUniformlyDistributedQueriesEnteringAtOneLocation(int numOfQueriesPerNode,
+			Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+	
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * nodes.size());
+		(new Thread(receiver)).start();
 		
+		String ip = receiver.getHost();
+		int port = receiver.getPort();
+		
+		int randomNum = (int) (Math.random() * nodes.size());
+		InetSocketAddress randomEntryNode = null;
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			if (randomNum == 0) {
+				randomEntryNode = e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER;
+				break;
+			}
+			--randomNum;
+		}
+		assert randomEntryNode != null;
+		
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			for (int i = 0; i < numOfQueriesPerNode; ++i) {
+				final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, randomEntryNode);
+				executor.execute(new Runnable() {
 
+					@Override
+					public void run() {
+						sendQuery(m);
+					}
+				});
+			}
+		}
 	}
 
 	public static void sendQuery(QueryMessage m) {

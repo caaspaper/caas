@@ -106,11 +106,13 @@ public class MainWindow {
 		JMenuItem startAdmin = new JMenuItem("Start admin");
 		JMenuItem startCacheNodes = new JMenuItem("Start cache nodes");
 		JMenuItem uniformlyDistributedTest = new JMenuItem("Uniform test, several entry nodes");
+		JMenuItem uniformlyDistributedTestSameEntry = new JMenuItem("Uniform test, one entry node");
 		JMenuItem exit = new JMenuItem("Exit");
 		
 		actions.add(startAdmin);
 		actions.add(startCacheNodes);
 		actions.add(uniformlyDistributedTest);
+		actions.add(uniformlyDistributedTestSameEntry);
 		actions.add(exit);
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
@@ -174,6 +176,24 @@ public class MainWindow {
 						}
 					}
 					admin.generateQueriesUniformlyDistributed(5);
+				}
+			}
+		});
+		
+		uniformlyDistributedTestSameEntry.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (admin != null) {
+					while (true) {
+						try {
+							int num = Integer.parseInt(JOptionPane.showInputDialog("Please input the number of messages per Node"));
+							admin.generateQueriesUniformlyDistributedEnteringAtOneLocation(num);
+							break;
+						} catch (NumberFormatException ex) {
+							
+						}
+					}
 				}
 			}
 		});

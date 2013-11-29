@@ -533,7 +533,7 @@ public class CacheNode {
 			 * query to a close neighbor
 			 */
 			if (getLoad() > 1) {
-				logger.write("Load exeeded allowed value");
+				logger.write("******Load exeeded allowed value*******");
 			} else {
 				processQueryLocally(message);
 			}
