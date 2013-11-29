@@ -125,7 +125,7 @@ public class MainWindow {
 					JOptionPane.showMessageDialog(frame, "Admin already started", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
 					// start the log receiver
-					receiver = new LogReceiver(DEFAULT_LOG_RECEIVER_PORT);
+					receiver = new LogReceiver(DEFAULT_LOG_RECEIVER_PORT, false, true);
 					(new Thread(receiver)).start();
 					System.out.println("launching admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
