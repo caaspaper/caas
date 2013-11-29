@@ -29,7 +29,13 @@ public class LogSender {
 		try {
 			writer = new BufferedWriter(new FileWriter(new File("/tmp/log_" + id + ".txt")));
 		} catch (IOException e) {
-			e.printStackTrace();
+			// non-unix where  /tmp is probably not available
+			try {
+				writer = new BufferedWriter(new FileWriter(new File("log_" + id + ".txt")));
+			} catch (IOException e2) {
+				e.printStackTrace();
+				e2.printStackTrace();
+			}
 		}
 	}
 	
