@@ -7,7 +7,6 @@ import java.net.Socket;
 import java.util.Vector;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.LogSender;
@@ -184,7 +183,8 @@ public class AdminNode /* implements AutoClosable */{
 					logger.write("Received Message that should be a join message, but it wasn't");
 					System.exit(-1);
 				}
-				JoinRequest jr = new JoinRequest(clientAddress, ((JoinMessage)message).ADDRESS_FOR_CACHENODE_NODECONNECTOR);
+				JoinMessage m = (JoinMessage) message;
+				JoinRequest jr = new JoinRequest(clientAddress, m.ADDRESS_FOR_CACHENODE_NEIGHBORCONNECTOR, m.ADDRESS_FOR_CACHENODE_QUERYLISTENER);
 				assert jr != null;
 				final ConfirmationMessage response = respondToJoinRequest(jr);
 
@@ -351,5 +351,19 @@ public class AdminNode /* implements AutoClosable */{
 		} catch (InterruptedException e) {
 			// ignore
 		}
+	}
+	
+	
+	public void generateQueriesUniformlyDistributed(final int numOfQueriesPerNode) {
+		
+		Thread t = new Thread(new Runnable() {
+		
+			@Override
+			public void run() {
+				QuerySender.generateUniformlyDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger);
+				
+			}
+		});	
+		t.start();
 	}
 }

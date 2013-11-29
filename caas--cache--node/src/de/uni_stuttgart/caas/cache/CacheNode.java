@@ -102,7 +102,7 @@ public class CacheNode {
 			throw new IOException("Could not connect to server", e);
 		}
 
-		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort())), new IResponseHandler() {
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort()), new InetSocketAddress(serverSocket.getInetAddress(), port)), new IResponseHandler() {
 
 			@Override
 			public void onResponseReceived(IMessage response) {
@@ -334,6 +334,8 @@ public class CacheNode {
 	 * the right neighbor
 	 */
 	public void processQuery(QueryMessage message) {
+		
+		logger.write("processing Query");
 
 		assert currentState == CacheNodeState.ACTIVE;
 		

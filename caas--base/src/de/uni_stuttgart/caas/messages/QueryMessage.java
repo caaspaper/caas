@@ -1,5 +1,6 @@
 package de.uni_stuttgart.caas.messages;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -27,6 +28,11 @@ public class QueryMessage implements IMessage {
 	public final int CLIENT_PORT;
 	
 	/**
+	 * Entry location to the network
+	 */
+	public final InetSocketAddress ENTRY_LOCATION;
+	
+	/**
 	 * If the load of the node that is supposed to process the message is to high
 	 * it forwards it to any other neighbor forcing it to process it
 	 */
@@ -38,11 +44,16 @@ public class QueryMessage implements IMessage {
 	 */
 	private String debuggingInfo = "";
 	
-	
 	public QueryMessage(LocationOfNode l, String ip, int port) {
+		this(l, ip, port, null);
+	}
+	
+	
+	public QueryMessage(LocationOfNode l, String ip, int port, InetSocketAddress entryLocation) {
 		QUERY_LOCATION = l;
 		CLIENT_IP = ip;
 		CLIENT_PORT = port;
+		ENTRY_LOCATION = entryLocation;
 	}
 	
 	@Override

@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import de.uni_stuttgart.caas.base.LogSender;
+import de.uni_stuttgart.caas.messages.QueryMessage;
 
 public class QueryListener implements Runnable {
 
@@ -83,18 +84,23 @@ public class QueryListener implements Runnable {
 				String ip = "";
 				int port = 0;
 				Object o = in.readObject();
-				if (o instanceof String) {
-					ip = (String) o;
+				if (o instanceof QueryMessage) {
+					logger.write("passing QueryMessage to CacheNode");
+					cacheNode.processQuery((QueryMessage) o);
 				} else {
-					System.err.println("FATAL ERROR");
+					if (o instanceof String) {
+						ip = (String) o;
+					} else {
+						System.err.println("FATAL ERROR");
+					}
+					o = in.readObject();
+					if (o instanceof Integer) {
+						port = (int) o;
+					} else {
+						System.err.println("FATAL ERROR");
+					}
+					processQuery(null, ip, port);
 				}
-				o = in.readObject();
-				if (o instanceof Integer) {
-					port = (int) o;
-				} else {
-					System.err.println("FATAL ERROR");
-				}
-				processQuery(null, ip, port);
 				out.close();
 				in.close();
 				clientSocket.close();

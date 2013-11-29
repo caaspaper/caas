@@ -23,6 +23,12 @@ public class NodeInfo implements Serializable{
 	 * Address of the Socket the node is listening on
 	 */
 	public final InetSocketAddress ADDRESS_FOR_CACHENODE_NODECONNECTOR;
+	
+	
+	/**
+	 * Address of the Socket the node is listening for Queries on
+	 */
+	public final InetSocketAddress ADDRESS_FOR_CACHENODE_QUERYLISTENER;
 
 	/**
 	 * Construct a new NodeInfo given the address of the node
@@ -30,9 +36,10 @@ public class NodeInfo implements Serializable{
 	 * @param nodeAdress
 	 *            The address of the node
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, InetSocketAddress nodeConnectorAddress) {
+	public NodeInfo(InetSocketAddress nodeAdress, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress) {
 		NODE_ADDRESS = nodeAdress;
-		ADDRESS_FOR_CACHENODE_NODECONNECTOR = nodeConnectorAddress;
+		ADDRESS_FOR_CACHENODE_NODECONNECTOR = neighborConnectorAddress;
+		ADDRESS_FOR_CACHENODE_QUERYLISTENER = queryListenerAddress;
 	}
 
 	/**
@@ -44,8 +51,8 @@ public class NodeInfo implements Serializable{
 	 * @param locationOfNode
 	 *            Location of the node in the network
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode, InetSocketAddress nodeConnectorAddress) {
-		this(nodeAdress, nodeConnectorAddress);
+	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress) {
+		this(nodeAdress, neighborConnectorAddress, queryListenerAddress);
 		updateLocation(locationOfNode);
 	}
 

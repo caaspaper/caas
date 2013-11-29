@@ -3,75 +3,151 @@ package de.uni_stuttgart.caas.admin;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.LogSender;
+import de.uni_stuttgart.caas.base.NodeInfo;
+import de.uni_stuttgart.caas.messages.QueryMessage;
 import de.uni_stuttgart.caas.messages.QueryResult;
 
 public class QuerySender {
 
-	public static void generateRandomQuery(String host, int port, int numOfQueries, LogSender logger) {
-		for (int i = 0; i < numOfQueries; i++) {
-			new QueryRunner(host, port, logger);
+	public static void generateRandomQuery(String ip, int port, LogSender logger) {
+		QueryReceiver receiver = new QueryReceiver(logger, 1);
+		(new Thread(receiver)).start();
+		sendQuery(new QueryMessage(new LocationOfNode(500, 500), ip, port, new InetSocketAddress(ip, port)));
+	}
+
+	public static void generateUniformlyDistributedQueries(int numOfQueriesPerNode, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+		List<InetSocketAddress> addresses = new ArrayList<>(nodes.size());
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			addresses.add(e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER);
+		}
+		int counter = 0;
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * addresses.size());
+		(new Thread(receiver)).start();
+		String ip = receiver.getHost();
+		int port = receiver.getPort();
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			for (int i = 0; i < numOfQueriesPerNode; ++i) {
+				final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, addresses.get(counter));
+				executor.execute(new Runnable() {
+
+					@Override
+					public void run() {
+						sendQuery(m);
+					}
+				});
+				++counter;
+			}
+			counter = 0;
+		}
+
+		
+
+	}
+
+	public static void sendQuery(QueryMessage m) {
+		try {
+			Socket s = new Socket(m.ENTRY_LOCATION.getHostString(), m.ENTRY_LOCATION.getPort());
+			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+			out.writeObject(m);
+			Thread.sleep(500);
+			out.close();
+			s.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
-	
-	
+
 	public static void main(String[] args) {
-		generateRandomQuery("localhost", 45530, 1, new LogSender(null, false, false, true));
+		generateRandomQuery("localhost", 40048, new LogSender(null, false, false, true));
 	}
 }
 
-class QueryRunner implements Runnable{
-	
-	public final String host;
-	public final int port;
-	private LogSender logger;
-	
-	public QueryRunner(String host, int port, LogSender logger) {
-		
-		this.host = host;
-		this.port = port;
-		this.logger = logger;
-		(new Thread(this)).start();
-	}
-	
-	@Override
-	public void run() {
-		
-		
-		try {
-			Socket server = new Socket(host, port);
-			// 0 for a random port
-			ServerSocket receiverSocket = new ServerSocket(0);
-			ObjectOutputStream out = new ObjectOutputStream(server.getOutputStream());
-			out.writeObject(receiverSocket.getInetAddress().getHostAddress());
-			out.writeObject(receiverSocket.getLocalPort());
-			out.close();
-			
-			Socket client = receiverSocket.accept();
+class QueryReceiver implements Runnable {
 
-			// out only needed so we can create the inputStreamReader
-			out = new ObjectOutputStream(client.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(client.getInputStream());
-			Object o = in.readObject();
-			if (o instanceof QueryResult) {
-				logger.write("Client received: " + (((QueryResult) o).getDebuggingInfo()));
-			} else {
-				logger.write("Client didn't receive QueryResult but some other Object");
-			}
-			server.close();
-			client.close();
-			in.close();
-			out.close();
-			receiverSocket.close();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
+	private ServerSocket serverSocket;
+	private Thread t;
+	private LogSender logger;
+	private AtomicInteger numOfQueriesSent;
+
+	public QueryReceiver(LogSender logger, int numOfQueriesSent) {
+		this.logger = logger;
+		this.numOfQueriesSent = new AtomicInteger(numOfQueriesSent);
+		try {
+			serverSocket = new ServerSocket(0);
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
+		}
+	}
+
+	public int getPort() {
+		return serverSocket.getLocalPort();
+	}
+	
+	public String getHost() {
+		return serverSocket.getInetAddress().getHostAddress();
+	}
+
+	public int stopAndGetNumOfOpenQueries() {
+		t.interrupt();
+		try {
+			t.join();
+		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+		return numOfQueriesSent.get();
+	}
+
+	@Override
+	public void run() {
+		t = Thread.currentThread();
+		while (!t.isInterrupted()) {
+			try {
+				final Socket s = serverSocket.accept();
+				Thread t = new Thread(new Runnable() {
+
+					@Override
+					public void run() {
+						try {
+							ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+							ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+
+							Object o = in.readObject();
+							if (o instanceof QueryResult) {
+								numOfQueriesSent.decrementAndGet();
+								logger.write("Client received: " + (((QueryResult) o).getDebuggingInfo()));
+							} else {
+								logger.write("Client didn't receive QueryResult but some other Object");
+							}
+							in.close();
+							out.close();
+							s.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (ClassNotFoundException e) {
+							e.printStackTrace();
+						}
+
+					}
+				});
+				t.start();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }
