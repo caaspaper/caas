@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.util.Vector;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
@@ -150,6 +151,8 @@ public class AdminNode /* implements AutoClosable */{
 
 		acceptingThread.start();
 	}
+	
+	private static AtomicInteger idSource = new AtomicInteger();
 
 	/**
 	 * 
@@ -158,6 +161,7 @@ public class AdminNode /* implements AutoClosable */{
 	 */
 	private class NodeConnector extends FullDuplexMPI {
 		private final InetSocketAddress clientAddress;
+		private volatile long nodeId = -1;
 
 		/**
 		 * 
@@ -166,6 +170,7 @@ public class AdminNode /* implements AutoClosable */{
 		 */
 		public NodeConnector(Socket cS) throws IOException {
 			super(cS, System.out, false);
+			nodeId = idSource.getAndIncrement();
 
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS.getRemoteSocketAddress();
@@ -184,14 +189,16 @@ public class AdminNode /* implements AutoClosable */{
 					logger.write("Received Message that should be a join message, but it wasn't");
 					System.exit(-1);
 				}
-				JoinRequest jr = new JoinRequest(clientAddress, ((JoinMessage)message).ADDRESS_FOR_CACHENODE_NODECONNECTOR);
+				nodeId = idSource.getAndIncrement();
+				JoinRequest jr = new JoinRequest(clientAddress, ((JoinMessage)message).ADDRESS_FOR_CACHENODE_NODECONNECTOR, nodeId);
 				assert jr != null;
 				final ConfirmationMessage response = respondToJoinRequest(jr);
 
 				if (response.STATUS_CODE == 0) {
+					
+					
 					// fire off grid construction in a separate thread to have
-					// the
-					// message pump stay responsive.
+					// the message pump stay responsive.
 					new Thread(new InitGridHelper()).start();
 				}
 				return response;
@@ -225,8 +232,10 @@ public class AdminNode /* implements AutoClosable */{
 
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
+				assert nodeId != -1;
+				
 				// now send back messages to cache nodes
-				sendMessageAsync(addNodeToGrid(clientAddress), new IResponseHandler() {
+				sendMessageAsync(addNodeToGrid(clientAddress, nodeId), new IResponseHandler() {
 
 					@Override
 					public void onResponseReceived(IMessage response) {
@@ -307,6 +316,8 @@ public class AdminNode /* implements AutoClosable */{
 	 * @param addressOfNode
 	 *            Contains IP + port of the cache node that is to be added to
 	 *            grid
+	 * @param id 
+	 * 			  Unique grid of the node
 	 * @return An AddToGridMessage containing information about nodes
 	 *         neighboring the cache node
 	 * 
@@ -315,10 +326,10 @@ public class AdminNode /* implements AutoClosable */{
 	 *       directly by the grid's methods.
 	 * 
 	 */
-	private IMessage addNodeToGrid(InetSocketAddress addressOfNode) {
+	private IMessage addNodeToGrid(InetSocketAddress addressOfNode, long id) {
 
 		assert sentActivate == false;
-		return new AddToGridMessage(grid.getLocationOfNode(addressOfNode), grid.getNeighborInfo(addressOfNode));
+		return new AddToGridMessage(grid.getLocationOfNode(addressOfNode), grid.getNeighborInfo(addressOfNode), id);
 	}
 
 	/**

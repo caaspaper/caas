@@ -64,7 +64,7 @@ public class JoinRequestManager {
 			if (joinRequests.size() == INITIAL_CAPACITY) {
 				throw new IllegalStateException();
 			}
-		
+
 			if (joinRequests.contains(rq)) {
 				throw new IllegalArgumentException("rq");
 			}
@@ -72,27 +72,30 @@ public class JoinRequestManager {
 			joinRequests.add(rq);
 		}
 	}
-	
+
 	public int getNumberOfConnectedNodes() {
 		return joinRequests.size();
 	}
-	
+
 	public List<JoinRequest> getJoinRequests() {
-		
+
 		return joinRequests;
 	}
 
 	public static class JoinRequest {
 
-		public JoinRequest(InetSocketAddress address, InetSocketAddress nodeConnectorAddr) {
+		public JoinRequest(InetSocketAddress address, InetSocketAddress nodeConnectorAddr, long id) {
 			assert address != null;
+			ID = id;
 			ADDRESS = address;
 			NODECONNECTOR_ADDRESS = nodeConnectorAddr;
 		}
 
 		public final InetSocketAddress ADDRESS;
-		
+
 		public final InetSocketAddress NODECONNECTOR_ADDRESS;
+
+		public final long ID;
 	}
 
 }

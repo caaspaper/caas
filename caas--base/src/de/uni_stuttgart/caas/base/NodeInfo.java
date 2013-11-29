@@ -7,7 +7,12 @@ import java.net.InetSocketAddress;
  * Class representing information about a node, that is stored by neighboring
  * nodes
  */
-public class NodeInfo implements Serializable{
+public class NodeInfo implements Serializable {
+
+	/**
+	 * Unique id of the node within the network
+	 */
+	public final long ID;
 
 	/**
 	 * Address of node
@@ -18,7 +23,7 @@ public class NodeInfo implements Serializable{
 	 * Location of node
 	 */
 	private LocationOfNode locationOfNode;
-	
+
 	/**
 	 * Address of the Socket the node is listening on
 	 */
@@ -30,9 +35,10 @@ public class NodeInfo implements Serializable{
 	 * @param nodeAdress
 	 *            The address of the node
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, InetSocketAddress nodeConnectorAddress) {
+	public NodeInfo(InetSocketAddress nodeAdress, InetSocketAddress nodeConnectorAddress, final long id) {
 		NODE_ADDRESS = nodeAdress;
 		ADDRESS_FOR_CACHENODE_NODECONNECTOR = nodeConnectorAddress;
+		ID = id;
 	}
 
 	/**
@@ -44,8 +50,8 @@ public class NodeInfo implements Serializable{
 	 * @param locationOfNode
 	 *            Location of the node in the network
 	 */
-	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode, InetSocketAddress nodeConnectorAddress) {
-		this(nodeAdress, nodeConnectorAddress);
+	public NodeInfo(InetSocketAddress nodeAdress, LocationOfNode locationOfNode, InetSocketAddress nodeConnectorAddress, final long id) {
+		this(nodeAdress, nodeConnectorAddress, id);
 		updateLocation(locationOfNode);
 	}
 
@@ -81,7 +87,7 @@ public class NodeInfo implements Serializable{
 		}
 		return false;
 	}
-	
+
 	@Override
 	public String toString() {
 		return NODE_ADDRESS + "->" + locationOfNode;

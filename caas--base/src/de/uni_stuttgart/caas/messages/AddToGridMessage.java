@@ -10,6 +10,10 @@ import delaunay.Point;
  * Message sent to cache node containing information about neighboring nodes
  */
 public class AddToGridMessage implements IMessage{
+	
+	/** Unique (lifetime of cache node) ID of the node within the network 
+	 */
+	public final long id;
 
 	/**
 	 * Location of the node, the message is sent to
@@ -27,8 +31,9 @@ public class AddToGridMessage implements IMessage{
 	 * @param neighboringNodes
 	 *            a collection of neighboring nodes
 	 */
-	public AddToGridMessage(LocationOfNode locationOfNode, Collection<NodeInfo> neighboringNodes) {
-		
+	public AddToGridMessage(LocationOfNode locationOfNode, Collection<NodeInfo> neighboringNodes, long id) {
+	
+		this.id = id;
 		this.locationOfNode = locationOfNode;
 		this.neighboringNodes = neighboringNodes;
 	}
