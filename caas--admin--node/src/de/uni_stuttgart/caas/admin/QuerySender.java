@@ -24,7 +24,7 @@ public class QuerySender {
 	public static void generateRandomQuery(String ip, int port, LogSender logger) {
 		QueryReceiver receiver = new QueryReceiver(logger, 1);
 		(new Thread(receiver)).start();
-		sendQuery(new QueryMessage(new LocationOfNode(500, 500), ip, port, new InetSocketAddress(ip, port)));
+		sendQuery(new QueryMessage(new LocationOfNode(500, 500), ip, receiver.getPort(), new InetSocketAddress(ip, port)));
 	}
 
 	public static void generateUniformlyDistributedQueries(int numOfQueriesPerNode, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {

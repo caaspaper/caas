@@ -79,7 +79,7 @@ public class Grid {
 			while (pointToAddressMapping
 					.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
 			}
-			connectedNodes.put(j.ADDRESS, new NodeInfo(j.ADDRESS, currentPoint, j.NEIGHBORCONNECTOR_ADDRESS, j.QUERYLISTENER_ADDRESS));
+			connectedNodes.put(j.ADDRESS, new NodeInfo(j.ADDRESS, currentPoint, j.NEIGHBORCONNECTOR_ADDRESS, j.QUERYLISTENER_ADDRESS, j.ID));
 			pointToAddressMapping.put(currentPoint, j.ADDRESS);
 		}
 	}
@@ -114,7 +114,7 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address is already
 	 */
-	public void addNewNode(InetSocketAddress address, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress) {
+	public void addNewNode(InetSocketAddress address, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress, long id) {
 
 		if (connectedNodes.containsKey(address)) {
 			throw new IllegalArgumentException("node already in triangulation");
@@ -122,7 +122,7 @@ public class Grid {
 		LocationOfNode currentPoint = null;
 		while (pointToAddressMapping.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
 		}
-		addNewNode(address, currentPoint, neighborConnectorAddress, queryListenerAddress);
+		addNewNode(address, currentPoint, neighborConnectorAddress, queryListenerAddress, id);
 	}
 
 	/**
@@ -135,14 +135,14 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address or point are already in triangulation
 	 */
-	public void addNewNode(InetSocketAddress address, LocationOfNode p, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress) {
+	public void addNewNode(InetSocketAddress address, LocationOfNode p, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress, long id) {
 
 		if (connectedNodes.containsKey(address) || pointToAddressMapping.containsKey(p)) {
 			throw new IllegalArgumentException("Address or location of node are already in triangulation");
 		}
 
 		pointToAddressMapping.put(p, address);
-		connectedNodes.put(address, new NodeInfo(address, p, neighborConnectorAddress, queryListenerAddress));
+		connectedNodes.put(address, new NodeInfo(address, p, neighborConnectorAddress, queryListenerAddress, id));
 		addPointToTriangulation(p);
 	}
 

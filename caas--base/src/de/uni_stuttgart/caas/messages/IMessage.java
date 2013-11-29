@@ -2,7 +2,7 @@ package de.uni_stuttgart.caas.messages;
 
 import java.io.Serializable;
 
-public interface IMessage extends Serializable{
+public interface IMessage extends Serializable {
 
 	public enum MessageType {
 
@@ -29,16 +29,23 @@ public interface IMessage extends Serializable{
 		 * sent to confirm another message or an action
 		 */
 		CONFIRM,
-		
+
 		/**
-		 * Message containing query information and maybe even the actual query from the client
+		 * Message containing query information and maybe even the actual query
+		 * from the client
 		 */
 		QUERY_MESSAGE,
-		
+
 		/**
 		 * Message containing the result of a query
 		 */
-		QUERY_RESULT
+		QUERY_RESULT,
+
+		/**
+		 * Used when establishing neighbor connections to allow nodes to
+		 * identify themselves. 
+		 */
+		PUBLISH_ID,
 	}
 
 	/**
