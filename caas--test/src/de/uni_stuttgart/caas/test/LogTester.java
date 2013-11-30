@@ -37,7 +37,7 @@ public class LogTester {
 	private class LogReceiveTester extends LogReceiver {
 
 		public LogReceiveTester(int port) {
-			super(port);
+			super(port, true, false);
 		}
 		
 		@Override

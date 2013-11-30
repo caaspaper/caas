@@ -465,6 +465,7 @@ public class CacheNode {
 
 			if (kind == MessageType.QUERY_MESSAGE) {
 				processQuery((QueryMessage) message);
+				return new ConfirmationMessage(1, "message processed");
 			} else if (kind == MessageType.PUBLISH_ID) {
 				onReceiveId((PublishIdMessage) message);
 				return new ConfirmationMessage(0, "id received");
@@ -562,7 +563,7 @@ public class CacheNode {
 			 * query to a close neighbor
 			 */
 			if (getLoad() > 1) {
-				logger.write("Load exeeded allowed value");
+				logger.write("******Load exeeded allowed value*******");
 			} else {
 				processQueryLocally(message);
 			}

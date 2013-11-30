@@ -52,9 +52,75 @@ public class QuerySender {
 			}
 			counter = 0;
 		}
-
+	}
+	
+	public static void generateQueriesWithRandomHotspotOneEntryPoint (int numOfQueries, Grid g, LogSender logger) {
 		
+		int randomNum = (int) (Math.random() * g.getConnectedNodes().size());
+		int counter = 0;
+		NodeInfo randomNode = null;
+		for (Entry<InetSocketAddress, NodeInfo> e : g.getConnectedNodes().entrySet()) {
+			if (counter == randomNum) {
+				randomNode = e.getValue();
+				break;
+			}
+			++counter;
+		}
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		QueryReceiver receiver = new QueryReceiver(logger, numOfQueries);
+		(new Thread(receiver)).start();
+		
+		String ip = receiver.getHost();
+		int port = receiver.getPort();
+		
+		ArrayList<NodeInfo> neighbors = new ArrayList<>(g.getNeighborInfo(randomNode.NODE_ADDRESS));
+		neighbors.add(randomNode);
+		for (int i = 0; i < numOfQueries; ++i) {
+			randomNum = (int) (Math.random() * neighbors.size());
+			final QueryMessage m = new QueryMessage(neighbors.get(randomNum).getLocationOfNode(), ip, port, randomNode.ADDRESS_FOR_CACHENODE_QUERYLISTENER);
+			executor.execute(new Runnable() {
+				
+				@Override
+				public void run() {
+					sendQuery(m);
+				}
+			});
+		}
+	}
+	
+	public static void generateUniformlyDistributedQueriesEnteringAtOneLocation(int numOfQueriesPerNode,
+			Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+	
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * nodes.size());
+		(new Thread(receiver)).start();
+		
+		String ip = receiver.getHost();
+		int port = receiver.getPort();
+		
+		int randomNum = (int) (Math.random() * nodes.size());
+		InetSocketAddress randomEntryNode = null;
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			if (randomNum == 0) {
+				randomEntryNode = e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER;
+				break;
+			}
+			--randomNum;
+		}
+		assert randomEntryNode != null;
+		
+		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			for (int i = 0; i < numOfQueriesPerNode; ++i) {
+				final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, randomEntryNode);
+				executor.execute(new Runnable() {
 
+					@Override
+					public void run() {
+						sendQuery(m);
+					}
+				});
+			}
+		}
 	}
 
 	public static void sendQuery(QueryMessage m) {

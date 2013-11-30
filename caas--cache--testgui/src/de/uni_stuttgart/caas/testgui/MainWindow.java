@@ -106,11 +106,15 @@ public class MainWindow {
 		JMenuItem startAdmin = new JMenuItem("Start admin");
 		JMenuItem startCacheNodes = new JMenuItem("Start cache nodes");
 		JMenuItem uniformlyDistributedTest = new JMenuItem("Uniform test, several entry nodes");
+		JMenuItem uniformlyDistributedTestSameEntry = new JMenuItem("Uniform test, one entry node");
+		JMenuItem hotspotOneEntryPoint = new JMenuItem("Hostport test, one entry node");
 		JMenuItem exit = new JMenuItem("Exit");
 		
 		actions.add(startAdmin);
 		actions.add(startCacheNodes);
 		actions.add(uniformlyDistributedTest);
+		actions.add(uniformlyDistributedTestSameEntry);
+		actions.add(hotspotOneEntryPoint);
 		actions.add(exit);
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
@@ -125,7 +129,7 @@ public class MainWindow {
 					JOptionPane.showMessageDialog(frame, "Admin already started", "error", JOptionPane.ERROR_MESSAGE);
 				} else {
 					// start the log receiver
-					receiver = new LogReceiver(DEFAULT_LOG_RECEIVER_PORT);
+					receiver = new LogReceiver(DEFAULT_LOG_RECEIVER_PORT, false, true);
 					(new Thread(receiver)).start();
 					System.out.println("launching admin node with a capacity of " + adminCapacityField.getText() + ", listening on port number "
 							+ adminPortField.getText());
@@ -174,6 +178,42 @@ public class MainWindow {
 						}
 					}
 					admin.generateQueriesUniformlyDistributed(5);
+				}
+			}
+		});
+		
+		uniformlyDistributedTestSameEntry.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (admin != null) {
+					while (true) {
+						try {
+							int num = Integer.parseInt(JOptionPane.showInputDialog("Please input the number of messages per Node"));
+							admin.generateQueriesUniformlyDistributedEnteringAtOneLocation(num);
+							break;
+						} catch (NumberFormatException ex) {
+							
+						}
+					}
+				}
+			}
+		});
+		
+		hotspotOneEntryPoint.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if (admin != null) {
+					while (true) {
+						try {
+							int num = Integer.parseInt(JOptionPane.showInputDialog("Please input the number of messages per Node"));
+							admin.generateQueriesHotSpotOneEntryLocation(num);
+							break;
+						} catch (NumberFormatException ex) {
+							
+						}
+					}
 				}
 			}
 		});
