@@ -54,6 +54,40 @@ public class QuerySender {
 		}
 	}
 	
+	public static void generateQueriesWithRandomHotspotOneEntryPoint (int numOfQueries, Grid g, LogSender logger) {
+		
+		int randomNum = (int) (Math.random() * g.getConnectedNodes().size());
+		int counter = 0;
+		NodeInfo randomNode = null;
+		for (Entry<InetSocketAddress, NodeInfo> e : g.getConnectedNodes().entrySet()) {
+			if (counter == randomNum) {
+				randomNode = e.getValue();
+				break;
+			}
+			++counter;
+		}
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		QueryReceiver receiver = new QueryReceiver(logger, numOfQueries);
+		(new Thread(receiver)).start();
+		
+		String ip = receiver.getHost();
+		int port = receiver.getPort();
+		
+		ArrayList<NodeInfo> neighbors = new ArrayList<>(g.getNeighborInfo(randomNode.NODE_ADDRESS));
+		neighbors.add(randomNode);
+		for (int i = 0; i < numOfQueries; ++i) {
+			randomNum = (int) (Math.random() * neighbors.size());
+			final QueryMessage m = new QueryMessage(neighbors.get(randomNum).getLocationOfNode(), ip, port, randomNode.ADDRESS_FOR_CACHENODE_QUERYLISTENER);
+			executor.execute(new Runnable() {
+				
+				@Override
+				public void run() {
+					sendQuery(m);
+				}
+			});
+		}
+	}
+	
 	public static void generateUniformlyDistributedQueriesEnteringAtOneLocation(int numOfQueriesPerNode,
 			Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
 	
