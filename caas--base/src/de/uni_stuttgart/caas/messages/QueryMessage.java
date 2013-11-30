@@ -38,22 +38,28 @@ public class QueryMessage implements IMessage {
 	 */
 	private boolean allowPropagationThroughNetwork = true;
 	
+	/**
+	 * Identifying the query in a simulation
+	 */
+	public final long ID;
+	
 	
 	/**
 	 * For debugging
 	 */
 	private String debuggingInfo = "";
 	
-	public QueryMessage(LocationOfNode l, String ip, int port) {
-		this(l, ip, port, null);
+	public QueryMessage(LocationOfNode l, String ip, int port, long id) {
+		this(l, ip, port, null, id);
 	}
 	
 	
-	public QueryMessage(LocationOfNode l, String ip, int port, InetSocketAddress entryLocation) {
+	public QueryMessage(LocationOfNode l, String ip, int port, InetSocketAddress entryLocation, long id) {
 		QUERY_LOCATION = l;
 		CLIENT_IP = ip;
 		CLIENT_PORT = port;
 		ENTRY_LOCATION = entryLocation;
+		ID = id;
 	}
 	
 	@Override
@@ -70,7 +76,7 @@ public class QueryMessage implements IMessage {
 	}
 	
 	public void appendToDebuggingInfo(String s) {
-		debuggingInfo += s + "\n";
+		debuggingInfo += s;
 	}
 	
 	public String getDebuggingInfo() {

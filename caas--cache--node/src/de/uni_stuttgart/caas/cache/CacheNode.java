@@ -9,10 +9,10 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -536,6 +536,10 @@ public class CacheNode {
 
 		assert currentState == CacheNodeState.ACTIVE;
 
+		logger.write("processing Query");
+		message.appendToDebuggingInfo(id + "-");
+
+		
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
 		Entry<NodeInfo, NeighborConnector> closestNodeToQuery = null, tempNode;
 
@@ -582,7 +586,7 @@ public class CacheNode {
 	public void processIncomingQueryToAdaptItToNetwork(Object query, String ip, int port) {
 
 		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random() * 2000000000);
-		QueryMessage newMessage = new QueryMessage(randomLocation, ip, port);
+		QueryMessage newMessage = new QueryMessage(randomLocation, ip, port, UUID.randomUUID().getMostSignificantBits());
 		logger.write("received new query from " + ip + ":" + port + " for " + randomLocation);
 		processQuery(newMessage);
 	}
@@ -605,8 +609,6 @@ public class CacheNode {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		message.appendToDebuggingInfo("Node " + position + ": processed Locally");
-
 		sendResultToClient(message);
 	}
 
@@ -617,7 +619,7 @@ public class CacheNode {
 
 			ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
 
-			out.writeObject(new QueryResult(message.getDebuggingInfo()));
+			out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
 			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {

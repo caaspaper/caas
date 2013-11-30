@@ -6,9 +6,12 @@ public class QueryResult implements IMessage {
 	
 	private String debuggingInfo;
 	
+	public final long ID;
 	
-	public QueryResult(String debuggingInfo) {
+	
+	public QueryResult(String debuggingInfo, long id) {
 		this.debuggingInfo = debuggingInfo;
+		ID = id;
 	}
 	
 	@Override
@@ -17,7 +20,7 @@ public class QueryResult implements IMessage {
 	}
 	
 	public void appendToDebbugingInfo(String s) {
-		debuggingInfo += s + "\n";
+		debuggingInfo += s;
 	}
 	
 	public String getDebuggingInfo() {
