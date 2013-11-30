@@ -81,6 +81,8 @@ public class CacheNode {
 	 */
 	private QueryListener queryListener;
 
+	private final Object activationMonitor = new Object();
+
 	/**
 	 * Construct a new cache node given the address of the admin node
 	 * 
@@ -111,18 +113,19 @@ public class CacheNode {
 			throw new IOException("Could not connect to server", e);
 		}
 
-		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort()), new InetSocketAddress(serverSocket.getInetAddress(), port)), new IResponseHandler() {
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort()),
+				new InetSocketAddress(serverSocket.getInetAddress(), port)), new IResponseHandler() {
 
-					@Override
-					public void onResponseReceived(IMessage response) {
-						process(response);
-					}
+			@Override
+			public void onResponseReceived(IMessage response) {
+				process(response);
+			}
 
-					@Override
-					public void onConnectionAborted() {
-						logger.write("cache node: connection to admin was closed");
-					}
-				});
+			@Override
+			public void onConnectionAborted() {
+				logger.write("cache node: connection to admin was closed");
+			}
+		});
 	}
 
 	/**
@@ -202,8 +205,17 @@ public class CacheNode {
 			if (type != MessageType.ACTIVATE) {
 				logger.write("Error in Protocol");
 			}
-			currentState = CacheNodeState.ACTIVE;
-			return onActivate();
+
+			ConfirmationMessage response = onActivate();
+			if (response.STATUS_CODE == 0) {				
+				synchronized (activationMonitor) {
+					currentState = CacheNodeState.ACTIVE;
+					activationMonitor.notifyAll();
+				}
+			} else {
+				// TODO - introduce failure state?
+			}
+			return response;
 
 		case ACTIVE:
 			// TODO what comes here?
@@ -279,7 +291,7 @@ public class CacheNode {
 	 * Called upon activation of the cache node. At this point, all neighboring
 	 * nodes know about each other and are ready to connect.
 	 */
-	private IMessage onActivate() {
+	private ConfirmationMessage onActivate() {
 		// concurrent access on this, but do not use ConcurrentHashMap as
 		// the output we are supposed to produce is a normal HashMap.
 		final HashMap<NodeInfo, NeighborConnector> newMap = new HashMap<>();
@@ -392,7 +404,7 @@ public class CacheNode {
 
 		// throw away the temporary connector list and set the new one
 		neighborConnectors = newMap;
-		logger.write("cache node: established " + neighborConnectors.size()  + " neighbor links");
+		logger.write("cache node: established " + neighborConnectors.size() + " neighbor links");
 		return new ConfirmationMessage(0, "cache node is now active and connected to neighbors");
 	}
 
@@ -442,7 +454,7 @@ public class CacheNode {
 		public NeighborConnector(Socket sock, long nid) throws IOException {
 			super(sock, System.out, true);
 			this.nid = nid;
-			
+
 			sendMessageAsync(new PublishIdMessage(id));
 		}
 
@@ -450,7 +462,7 @@ public class CacheNode {
 		public IMessage processIncomingMessage(IMessage message) {
 			final MessageType kind = message.getMessageType();
 			logger.write("cache node: received: " + kind + " from neighbor connection " + toString());
-			
+
 			if (kind == MessageType.QUERY_MESSAGE) {
 				processQuery((QueryMessage) message);
 			} else if (kind == MessageType.PUBLISH_ID) {
@@ -500,7 +512,25 @@ public class CacheNode {
 	 * right neighbor
 	 */
 	public void processQuery(QueryMessage message) {
-		
+
+		// it is possible that we receive queries before all neighbor
+		// connections have been fully established. In this case, we
+		// simply synchronize on the completion of this stage.
+		//
+		// we are guaranteed that this does not cause deadlock as we can never
+		// be waiting on establishing a network connection with the node that
+		// we got this message from (and on whose message queue we are blocking)
+		synchronized (activationMonitor) {
+			while (currentState != CacheNodeState.ACTIVE) {
+				try {
+					activationMonitor.wait();
+				} catch (InterruptedException e) {
+					assert false; // this thread is not interrupted
+					e.printStackTrace();
+				}
+			}
+		}
+
 		logger.write("processing Query");
 
 		assert currentState == CacheNodeState.ACTIVE;
@@ -545,6 +575,8 @@ public class CacheNode {
 	 * 
 	 * @param query
 	 *            the actual query
+	 * @param ip
+	 *            , port The address to send the response to
 	 */
 	public void processIncomingQueryToAdaptItToNetwork(Object query, String ip, int port) {
 
