@@ -33,7 +33,7 @@ public class QueryLog {
 	
 	public void writeToFile(BufferedWriter writer) {
 		try {
-			writer.append(ID + "," + getTransitTime() + "," + path.length);
+			writer.append(ID + "," + getTransitTime() + "," + path.length + ",");
 			for (int i = 0; i < path.length; ++i) {
 				writer.append(path[i].replace("\n", ""));
 				if (i != path.length - 1) {
