@@ -268,45 +268,68 @@ class QueryReceiver implements Runnable {
 	public void run() {
 		t = Thread.currentThread();
 		
-		int cursor = 0;
 		while (!t.isInterrupted()) {
 			try {
-				Socket s = serverSocket.accept();
+				final Socket s = serverSocket.accept();
 
-				// note: avoid the overhead of creating a thread here as the
-				// actual work
-				// we do here is less than 1/1000 of the cost of creating a
-				// thread.
-
-				ObjectInputStream in = new ObjectInputStream(s.getInputStream());
-				Object o = in.readObject();
-				long time = System.nanoTime();
-				if (o instanceof QueryResult) {
-
-					logger.write("Client received answer to a query");
-					QueryResult r = (QueryResult) o;
-					QueryLog l = queries.get(r.ID);
-					l.finishQuery(time, r.getDebuggingInfo().split("-"));
-					l.writeToFile(writer);
+				Thread t = new Thread(new Runnable() {
 					
-					times[cursor++] = l.getTransitTime() / 1000000;
+					@Override
+					public void run() {
+						ObjectInputStream in;
+						try {
+							in = new ObjectInputStream(s.getInputStream());
+						} catch (IOException e) {
+							e.printStackTrace();
+							return;
+						}
+						Object o;
+						try {
+							o = in.readObject();
+						} catch (ClassNotFoundException e) {
+							e.printStackTrace();
+							return;
+						} catch (IOException e) {
+							e.printStackTrace();
+							return;
+						}
+						long time = System.nanoTime();
+						if (o instanceof QueryResult) {
 
-					syncPoint.countDown();
-					long l1 = syncPoint.getCount();
-					if (l1 % 100 == 0 || l1 < 50) {
-						System.out.println(l1);
+							logger.write("Client received answer to a query");
+							QueryResult r = (QueryResult) o;
+							QueryLog l = queries.get(r.ID);
+							l.finishQuery(time, r.getDebuggingInfo().split("-"));
+							
+							synchronized(syncPoint) { // TODO: too long.
+								l.writeToFile(writer);
+								
+								
+								long l1 = syncPoint.getCount();
+								times[(int) (l1 - 1)] = l.getTransitTime() / 1000000;
+								
+								syncPoint.countDown();
+								
+								if (l1 % 100 == 0 || l1 < 50) {
+									System.out.println(l1);
+								}
+							}
+						} else {
+							logger.write("Client didn't receive QueryResult but some other Object");
+						}
+						try {
+							in.close();
+							s.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
-				} else {
-					logger.write("Client didn't receive QueryResult but some other Object");
-				}
-				in.close();
-				s.close();
+				});
+				t.start();
 
 			} catch (IOException e) {
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				e.printStackTrace();
-			}
+			} 
 		}
 	}
 }
