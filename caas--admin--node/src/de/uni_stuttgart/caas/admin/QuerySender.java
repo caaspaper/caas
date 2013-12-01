@@ -66,9 +66,11 @@ public class QuerySender {
 		final String localHost = tempHost;
 		final int port = receiver.getPort();
 
-		// always place the hotspot in the center of the grid as to avoid
-		// another random variable in the game.
-		final LocationOfNode hotspot = Grid.CenterPoint();
+		// always place the hotspot at a fixed position in the grid as to avoid
+		// another random variable in the game. Do not place it in the center, 
+		// as this would minimize the number of hops and is thus unfair with
+		// respect to the uniform case.
+		final LocationOfNode hotspot = new LocationOfNode(Grid.MAX_GRID_INDEX / 5, Grid.MAX_GRID_INDEX / 5);
 
 		long id = 0;
 		for (final Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
@@ -302,7 +304,7 @@ class QueryReceiver implements Runnable {
 							l.finishQuery(time, r.getDebuggingInfo().split("-"));
 							
 							synchronized(syncPoint) { // TODO: too long.
-								l.writeToFile(writer);
+								//l.writeToFile(writer);
 								
 								
 								long l1 = syncPoint.getCount();
