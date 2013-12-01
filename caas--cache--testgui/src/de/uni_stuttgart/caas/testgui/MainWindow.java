@@ -177,7 +177,6 @@ public class MainWindow {
 							
 						}
 					}
-					admin.generateQueriesUniformlyDistributed(5);
 				}
 			}
 		});
