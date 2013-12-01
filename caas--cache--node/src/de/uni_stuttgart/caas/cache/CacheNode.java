@@ -566,7 +566,7 @@ public class CacheNode {
 			 * TODO process node locally if the current load is to high, send
 			 * query to a close neighbor
 			 */
-			if (getLoad() > 1) {
+			if (false && getLoad() > 1) {
 				logger.write("******Load exeeded allowed value*******");
 			} else {
 				processQueryLocally(message);
