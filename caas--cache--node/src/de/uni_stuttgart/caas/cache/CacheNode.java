@@ -467,6 +467,12 @@ public class CacheNode {
 			logger.write("cache node: received: " + kind + " from neighbor connection " + toString());
 
 			if (kind == MessageType.QUERY_MESSAGE) {
+				// (hack) extra penalty to simulate latency in a real, physical network
+				try {
+					Thread.sleep(2);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 				processQuery((QueryMessage) message);
 				return new ConfirmationMessage(1, "message processed");
 			} else if (kind == MessageType.PUBLISH_ID) {
@@ -577,7 +583,7 @@ public class CacheNode {
 			 * TODO process node locally if the current load is to high, send
 			 * query to a close neighbor
 			 */
-			if (false && getLoad() > 1) {
+			if (getLoad() > 1) {
 				logger.write("******Load exeeded allowed value*******");
 				sendMessageToNeighbor(message);
 			} else {
