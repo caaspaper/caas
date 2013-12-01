@@ -6,24 +6,24 @@ import java.util.Date;
 
 public class QueryLog {
 
-	public final Date startTime;
-	private Date endTime;
+	public final long startTime;
+	private long endTime = 0;
 	private String[] path;
 	public final long ID;
 
-	public QueryLog(Date start, long id) {
+	public QueryLog(long start, long id) {
 		startTime = start;
 		ID = id;
 	}
 	
-	public void finishQuery(Date time, String[] path) {
+	public void finishQuery(long time, String[] path) {
 		endTime = time;
 		this.path = path;
 	}
 	
 	public long getTransitTime() {
-		assert endTime != null;
-		return endTime.getTime() - startTime.getTime();
+		assert endTime != 0;
+		return endTime - startTime;
 	}
 	
 	public String[] getPath() {

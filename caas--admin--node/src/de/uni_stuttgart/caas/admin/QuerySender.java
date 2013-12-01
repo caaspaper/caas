@@ -219,7 +219,7 @@ public class QuerySender {
 		try {
 			Socket s = new Socket(m.ENTRY_LOCATION.getHostString(), m.ENTRY_LOCATION.getPort());
 			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-			r.waitForQuery(m, new Date());
+			r.waitForQuery(m, System.nanoTime());
 			out.writeObject(m);
 
 			// bad idea, makes our benchmarking excessively slow - rather GC
@@ -294,8 +294,8 @@ class QueryReceiver implements Runnable {
 		}
 	}
 
-	public void waitForQuery(QueryMessage m, Date d) {
-		queries.putIfAbsent(m.ID, new de.uni_stuttgart.caas.base.QueryLog(d, m.ID));
+	public void waitForQuery(QueryMessage m, long time) {
+		queries.putIfAbsent(m.ID, new de.uni_stuttgart.caas.base.QueryLog(time, m.ID));
 	}
 
 	public int getPort() {
@@ -336,13 +336,13 @@ class QueryReceiver implements Runnable {
 
 				ObjectInputStream in = new ObjectInputStream(s.getInputStream());
 				Object o = in.readObject();
-				Date d = new Date();
+				long time = System.nanoTime();
 				if (o instanceof QueryResult) {
 
 					logger.write("Client received answer to a query");
 					QueryResult r = (QueryResult) o;
 					QueryLog l = queries.get(r.ID);
-					l.finishQuery(d, r.getDebuggingInfo().split("-"));
+					l.finishQuery(time, r.getDebuggingInfo().split("-"));
 					l.writeToFile(writer);
 					
 					times[cursor++] = l.getTransitTime();
