@@ -130,6 +130,9 @@ public class QuerySender {
 		long[] times = receiver.GetTimes();
 		Arrays.sort(times);
 		
+		// take the upper 95% (P95)
+		times = Arrays.copyOfRange(times, 0, (int)(times.length * 0.95) );
+		
 		assert times.length > 0;
 		final long median = times[times.length/2];
 		
