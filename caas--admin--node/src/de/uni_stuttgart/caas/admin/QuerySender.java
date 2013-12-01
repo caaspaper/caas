@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,30 +37,46 @@ public class QuerySender {
 				.getLeastSignificantBits()), receiver);
 	}
 
-	public static void generateUniformlyDistributedQueries(int numOfQueriesPerNode, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
-		List<InetSocketAddress> addresses = new ArrayList<>(nodes.size());
-		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
-			addresses.add(e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER);
-		}
-		int counter = 0;
-		ExecutorService executor = Executors.newFixedThreadPool(10);
-		final QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * addresses.size());
+	public static void generateUniformlyDistributedQueries(final int numOfQueriesPerNode, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+		ExecutorService executor = Executors.newFixedThreadPool(4);
+		// ExecutorCompletionService is nasty, so use a countdown to join on them
+		final CountDownLatch count = new CountDownLatch(nodes.size());
+		
+		final QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * nodes.size());
 		(new Thread(receiver)).start();
-		String ip = receiver.getHost();
-		int port = receiver.getPort();
+		final String ip = receiver.getHost();
+		final int port = receiver.getPort();
+		
 		long id = 0;
-		for (Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
-			for (int i = 0; i < numOfQueriesPerNode; ++i) {
-				final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, addresses.get(counter++ % addresses.size()), ++id);
-				executor.execute(new Runnable() {
+		for (final Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
+			final InetSocketAddress adr = e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER;
+			
+			final long localId = id;
+			id += numOfQueriesPerNode;
+			
+			// serialize queries on one cache node to avoid exhausting them
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
 
-					@Override
-					public void run() {
+					for (int i = 0; i < numOfQueriesPerNode; ++i) {
+						final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, adr, localId + i);
 						sendQuery(m, receiver);
-					}
-				});
-			}
+					}								
+					count.countDown();
+				}
+			});
 		}
+		
+		try {
+			count.await();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+			assert false;
+		}
+		
+		receiver.join();
+		System.out.println("generateUniformlyDistributedQueries completed");
 	}
 
 	public static void generateQueriesWithRandomHotspotOneEntryPoint(int numOfQueries, Grid g, LogSender logger) {
@@ -156,13 +174,13 @@ class QueryReceiver implements Runnable {
 	private ServerSocket serverSocket;
 	private Thread t;
 	private LogSender logger;
-	private AtomicInteger numOfQueriesSent;
+	private CountDownLatch syncPoint;
 	private ConcurrentHashMap<Long, de.uni_stuttgart.caas.base.QueryLog> queries;
 	private BufferedWriter writer;
 
 	public QueryReceiver(LogSender logger, int numOfQueriesSent) {
 		this.logger = logger;
-		this.numOfQueriesSent = new AtomicInteger(numOfQueriesSent);
+		syncPoint = new CountDownLatch(numOfQueriesSent);
 		try {
 			serverSocket = new ServerSocket(0);
 		} catch (IOException e) {
@@ -188,6 +206,19 @@ class QueryReceiver implements Runnable {
 		}
 		queries = new ConcurrentHashMap<>(numOfQueriesSent);
 	}
+	
+	public void join() {
+		try {
+			syncPoint.await();
+		} catch (InterruptedException e) {		
+			e.printStackTrace();
+		}
+		try {
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public void waitForQuery(QueryMessage m, Date d) {
 		queries.putIfAbsent(m.ID, new de.uni_stuttgart.caas.base.QueryLog(d, m.ID));
@@ -208,7 +239,7 @@ class QueryReceiver implements Runnable {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		return numOfQueriesSent.get();
+		return (int) syncPoint.getCount();
 	}
 
 	@Override
@@ -216,42 +247,33 @@ class QueryReceiver implements Runnable {
 		t = Thread.currentThread();
 		while (!t.isInterrupted()) {
 			try {
-				final Socket s = serverSocket.accept();
-				Thread t = new Thread(new Runnable() {
+				Socket s = serverSocket.accept();
+				
+				// note: avoid the overhead of creating a thread here as the actual work
+				// we do here is less than 1/1000 of the cost of creating a thread.
 
-					@Override
-					public void run() {
-						try {
-							ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-							ObjectInputStream in = new ObjectInputStream(s.getInputStream());
-
-							Object o = in.readObject();
-							Date d = new Date();
-							if (o instanceof QueryResult) {
-								numOfQueriesSent.decrementAndGet();
-								logger.write("Client received answer to a query");
-								QueryResult r = (QueryResult) o;
-								QueryLog l = queries.get(r.ID);
-								l.finishQuery(d, r.getDebuggingInfo().split("-"));
-								synchronized (writer) {
-									l.writeToFile(writer);
-								}
-							} else {
-								logger.write("Client didn't receive QueryResult but some other Object");
-							}
-							in.close();
-							out.close();
-							s.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						} catch (ClassNotFoundException e) {
-							e.printStackTrace();
-						}
-
-					}
-				});
-				t.start();
+				ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+				Object o = in.readObject();
+				Date d = new Date();
+				if (o instanceof QueryResult) {
+					
+					logger.write("Client received answer to a query");
+					QueryResult r = (QueryResult) o;
+					QueryLog l = queries.get(r.ID);
+					System.out.println(r.getDebuggingInfo());
+					l.finishQuery(d, r.getDebuggingInfo().split("-"));
+					l.writeToFile(writer);
+					
+					syncPoint.countDown();
+				} else {
+					logger.write("Client didn't receive QueryResult but some other Object");
+				}
+				in.close();
+				s.close();
+				
 			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {				
 				e.printStackTrace();
 			}
 		}
