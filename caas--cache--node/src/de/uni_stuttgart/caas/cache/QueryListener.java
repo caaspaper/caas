@@ -3,6 +3,8 @@ package de.uni_stuttgart.caas.cache;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -124,5 +126,9 @@ public class QueryListener implements Runnable {
 
 	public int getPort() {
 		return serverSocket.getLocalPort();
+	}
+	
+	public InetAddress getInetAddress() {
+		return serverSocket.getInetAddress();
 	}
 }

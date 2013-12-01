@@ -2,6 +2,7 @@ package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -113,8 +115,10 @@ public class CacheNode {
 			throw new IOException("Could not connect to server", e);
 		}
 
-		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(serverSocket.getInetAddress(), serverSocket.getLocalPort()),
-				new InetSocketAddress(serverSocket.getInetAddress(), port)), new IResponseHandler() {
+		String localHost = Inet4Address.getLocalHost().getHostAddress();
+		System.out.println(localHost);
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(localHost, serverSocket.getLocalPort()),
+				new InetSocketAddress(localHost, queryListener.getPort())), new IResponseHandler() {
 
 			@Override
 			public void onResponseReceived(IMessage response) {

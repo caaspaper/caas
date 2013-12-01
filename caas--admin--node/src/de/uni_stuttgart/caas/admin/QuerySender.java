@@ -102,8 +102,8 @@ public class QuerySender {
 						try {
 							Thread.sleep(Math.max(0, wait));
 						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
+							assert false;
 						}
 
 						final long timeSlept = (System.nanoTime() - sleepTime) / 1000000;
@@ -123,8 +123,8 @@ public class QuerySender {
 		}
 
 		receiver.join();
-		System.out.println("generateUniformlyDistributedQueries completed, " + qcount + " queries over " + totalBenchmarkTime + "s and " + nodes.size()
-				+ " nodes. " + perNode + " queries per node");
+		System.out.println("benchmark completed, " + qcount + " queries over " + totalBenchmarkTime + "s and " + nodes.size()
+				+ " nodes. " + perNode + " queries per node, " + (uniform ? "uniform" : "gaussian") + " distribution");
 		
 		// compute mean and median of all timings
 		long[] times = receiver.GetTimes();
