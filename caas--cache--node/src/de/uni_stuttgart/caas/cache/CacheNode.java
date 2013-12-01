@@ -605,10 +605,10 @@ public class CacheNode {
 		queryProcessTimes.add(System.currentTimeMillis());
 
 		try {
-			Thread.sleep(50);
+			Thread.sleep(10);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		}
+		} 
 		sendResultToClient(message);
 	}
 
@@ -618,8 +618,12 @@ public class CacheNode {
 			Socket client = new Socket(message.CLIENT_IP, message.CLIENT_PORT);
 
 			ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-
 			out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
+			
+			// note: this is the main message thread for this thread, so we are effectively 
+			// blocking the cache node by sleeping here. Let the GC collect the socket.
+			
+			/*
 			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
@@ -627,6 +631,7 @@ public class CacheNode {
 			}
 			out.close();
 			client.close();
+			*/
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
