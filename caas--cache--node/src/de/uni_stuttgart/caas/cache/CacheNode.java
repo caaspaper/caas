@@ -538,6 +538,10 @@ public class CacheNode {
 
 		logger.write("processing Query");
 		message.appendToDebuggingInfo(id + "-");
+		if (!message.isPropagtionThroughNetworkAllowed()) {
+			logger.write("RECEIVED MESSAGE THAT I AM NOT ALLOWED TO PROPAGATE");
+			processQueryLocally(message);
+		}
 
 		
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
@@ -568,9 +572,25 @@ public class CacheNode {
 			 */
 			if (false && getLoad() > 1) {
 				logger.write("******Load exeeded allowed value*******");
+				sendMessageToNeighbor(message);
 			} else {
 				processQueryLocally(message);
 			}
+		}
+	}
+
+	private void sendMessageToNeighbor(QueryMessage message) {
+		
+		int randomNum = (int)(Math.random() * neighborConnectors.size());
+	
+		for (NodeInfo n : neighborConnectors.keySet()) {
+			if (randomNum == 0) {
+				message.stopPropagationOfTheMessage();
+				neighborConnectors.get(n).sendMessageAsync(message);
+				break;
+			}
+			--randomNum;
+			
 		}
 	}
 
@@ -679,7 +699,6 @@ public class CacheNode {
 	public double getLoad() {
 
 		long currentTime = System.currentTimeMillis();
-
 		while (!queryProcessTimes.isEmpty()) {
 			if (currentTime - queryProcessTimes.peek() > 1000) {
 				queryProcessTimes.poll();
@@ -687,6 +706,7 @@ public class CacheNode {
 				break;
 			}
 		}
+		logger.write(queryProcessTimes.size() + " queries in the last second ******");
 		return queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
 	}
 
