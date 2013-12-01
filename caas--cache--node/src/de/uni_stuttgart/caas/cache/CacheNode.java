@@ -116,7 +116,6 @@ public class CacheNode {
 		}
 
 		String localHost = Inet4Address.getLocalHost().getHostAddress();
-		System.out.println(localHost);
 		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(localHost, serverSocket.getLocalPort()),
 				new InetSocketAddress(localHost, queryListener.getPort())), new IResponseHandler() {
 

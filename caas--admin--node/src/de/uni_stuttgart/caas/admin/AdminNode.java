@@ -388,26 +388,4 @@ public class AdminNode /* implements AutoClosable */{
 		});	
 		t.start();
 	}
-	
-	public void generateQueriesUniformlyDistributedEnteringAtOneLocation(final int numOfQueriesPerNode) {
-		Thread t = new Thread (new Runnable() {
-			
-			@Override
-			public void run() {
-				QuerySender.generateUniformlyDistributedQueriesEnteringAtOneLocation(numOfQueriesPerNode, grid.getConnectedNodes(), logger);
-			}
-		});
-		t.start();
-	}
-
-	public void generateQueriesHotSpotOneEntryLocation(final int num) {
-		Thread t = new Thread(new Runnable() {
-			
-			@Override
-			public void run() {
-				QuerySender.generateQueriesWithRandomHotspotOneEntryPoint(num, grid, logger);
-			}
-		});
-		t.start();
-	}
 }

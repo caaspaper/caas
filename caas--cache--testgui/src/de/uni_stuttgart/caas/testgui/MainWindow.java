@@ -107,17 +107,12 @@ public class MainWindow {
 		JMenuItem startCacheNodes = new JMenuItem("Start cache nodes");
 		JMenuItem uniformlyDistributedTest = new JMenuItem("Benchmark: Uniform on whole grid");
 		JMenuItem uniformlyDistributedTestHotspot = new JMenuItem("Benchmark: Gaussian distribution around hotspot");
-		
-		JMenuItem uniformlyDistributedTestSameEntry = new JMenuItem("Uniform test, one entry node");
-		JMenuItem hotspotOneEntryPoint = new JMenuItem("Hostport test, one entry node");
 		JMenuItem exit = new JMenuItem("Exit");
 		
 		actions.add(startAdmin);
 		actions.add(startCacheNodes);
 		actions.add(uniformlyDistributedTest);
 		actions.add(uniformlyDistributedTestHotspot);
-		//actions.add(uniformlyDistributedTestSameEntry);
-		//actions.add(hotspotOneEntryPoint);
 		actions.add(exit);
 		
 		JMenuItem networkGraph = new JMenuItem("Network Graph");
@@ -201,41 +196,6 @@ public class MainWindow {
 			}
 		});
 		
-		uniformlyDistributedTestSameEntry.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (admin != null) {
-					while (true) {
-						try {
-							int num = Integer.parseInt(JOptionPane.showInputDialog("Please input the number of messages per Node"));
-							admin.generateQueriesUniformlyDistributedEnteringAtOneLocation(num);
-							break;
-						} catch (NumberFormatException ex) {
-							
-						}
-					}
-				}
-			}
-		});
-		
-		hotspotOneEntryPoint.addActionListener(new ActionListener() {
-			
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				if (admin != null) {
-					while (true) {
-						try {
-							int num = Integer.parseInt(JOptionPane.showInputDialog("Please input the number of messages per Node"));
-							admin.generateQueriesHotSpotOneEntryLocation(num);
-							break;
-						} catch (NumberFormatException ex) {
-							
-						}
-					}
-				}
-			}
-		});
 		
 		exit.addActionListener(new ActionListener() {
 
