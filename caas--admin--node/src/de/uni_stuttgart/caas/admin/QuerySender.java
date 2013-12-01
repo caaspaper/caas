@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +125,22 @@ public class QuerySender {
 		receiver.join();
 		System.out.println("generateUniformlyDistributedQueries completed, " + qcount + " queries over " + totalBenchmarkTime + "s and " + nodes.size()
 				+ " nodes. " + perNode + " queries per node");
+		
+		// compute mean and median of all timings
+		long[] times = receiver.GetTimes();
+		Arrays.sort(times);
+		
+		assert times.length > 0;
+		final long median = times[times.length/2];
+		
+		double mean = 0.0;
+		for(long l: times) {
+			mean += (double)l;
+		}
+		mean /= times.length;
+		
+		System.out.println("mean: " + mean + "ms");
+		System.out.println("median: " + median + "ms");
 	}
 
 	public static void generateQueriesWithRandomHotspotOneEntryPoint(int numOfQueries, Grid g, LogSender logger) {
@@ -228,8 +245,11 @@ class QueryReceiver implements Runnable {
 	private CountDownLatch syncPoint;
 	private ConcurrentHashMap<Long, de.uni_stuttgart.caas.base.QueryLog> queries;
 	private BufferedWriter writer;
+	
+	private final long times[];
 
 	public QueryReceiver(LogSender logger, int numOfQueriesSent) {
+		times = new long[numOfQueriesSent];
 		this.logger = logger;
 		syncPoint = new CountDownLatch(numOfQueriesSent);
 		try {
@@ -292,10 +312,16 @@ class QueryReceiver implements Runnable {
 		}
 		return (int) syncPoint.getCount();
 	}
+	
+	public long[] GetTimes() {
+		return times;
+	}
 
 	@Override
 	public void run() {
 		t = Thread.currentThread();
+		
+		int cursor = 0;
 		while (!t.isInterrupted()) {
 			try {
 				Socket s = serverSocket.accept();
@@ -315,11 +341,13 @@ class QueryReceiver implements Runnable {
 					QueryLog l = queries.get(r.ID);
 					l.finishQuery(d, r.getDebuggingInfo().split("-"));
 					l.writeToFile(writer);
+					
+					times[cursor++] = l.getTransitTime();
 
 					syncPoint.countDown();
 					long l1 = syncPoint.getCount();
 					if (l1 % 100 == 0 || l1 < 50) {
-						System.out.println(syncPoint.getCount());
+						System.out.println(l1);
 					}
 				} else {
 					logger.write("Client didn't receive QueryResult but some other Object");
