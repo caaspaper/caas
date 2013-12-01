@@ -82,7 +82,7 @@ public class QuerySender {
 							// distribution with a standard deviation of 0.3 the
 							// grid size
 							// TODO: is a poisson distribution a better model?
-							point = Grid.SampleGaussian(hotspot, 0.3);
+							point = Grid.SampleGaussian(hotspot, 0.2);
 						}
 
 						// generate an uniformly random grid point
