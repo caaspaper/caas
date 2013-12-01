@@ -34,7 +34,12 @@ public class NodeInfo implements Serializable {
 	 * Address of the Socket the node is listening for Queries on
 	 */
 	public final InetSocketAddress ADDRESS_FOR_CACHENODE_QUERYLISTENER;
-
+	
+	/**
+	 * Last known value for the load of the node
+	 */
+	private double load = 0;
+	
 	/**
 	 * Construct a new NodeInfo given the address of the node
 	 * 
@@ -79,6 +84,14 @@ public class NodeInfo implements Serializable {
 	 */
 	public LocationOfNode getLocationOfNode() {
 		return locationOfNode;
+	}
+	
+	public void setLoad(double load) {
+		this.load = load;
+	}
+	
+	public double getLoad() {
+		return load;
 	}
 
 	@Override

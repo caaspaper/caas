@@ -345,7 +345,7 @@ class QueryReceiver implements Runnable {
 					l.finishQuery(time, r.getDebuggingInfo().split("-"));
 					l.writeToFile(writer);
 					
-					times[cursor++] = l.getTransitTime();
+					times[cursor++] = l.getTransitTime() / 1000000;
 
 					syncPoint.countDown();
 					long l1 = syncPoint.getCount();
