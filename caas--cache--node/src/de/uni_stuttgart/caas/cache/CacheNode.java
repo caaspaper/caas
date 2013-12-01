@@ -555,6 +555,7 @@ public class CacheNode {
 		if (!message.isPropagtionThroughNetworkAllowed()) {
 			logger.write("RECEIVED MESSAGE THAT I AM NOT ALLOWED TO PROPAGATE");
 			processQueryLocally(message);
+			return;
 		}
 
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
