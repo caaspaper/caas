@@ -37,7 +37,13 @@ public class QueryListener implements Runnable {
 			try {
 				clientSocket = serverSocket.accept();
 				logger.write("client connected requesting data");
-				new Thread(new ListenerThread(clientSocket)).start();
+				
+				// no thread here - this is too expensive and we do not typically block for long
+				//new Thread(new ListenerThread(clientSocket)).start();
+				
+				Runnable r = new ListenerThread(clientSocket);
+				r.run();
+				
 			} catch (IOException e) {
 				
 			}
@@ -79,7 +85,7 @@ public class QueryListener implements Runnable {
 		public void run() {
 			try {
 				// out not used, but needed for inputStream
-				ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+				//ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
 				ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
 				String ip = "";
 				int port = 0;
@@ -101,7 +107,7 @@ public class QueryListener implements Runnable {
 					}
 					processQuery(null, ip, port);
 				}
-				out.close();
+				//out.close();
 				in.close();
 				clientSocket.close();
 			} catch (IOException e) {

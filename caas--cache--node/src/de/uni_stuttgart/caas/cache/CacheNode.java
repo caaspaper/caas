@@ -605,7 +605,7 @@ public class CacheNode {
 		queryProcessTimes.add(System.currentTimeMillis());
 
 		try {
-			Thread.sleep(10);
+			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} 

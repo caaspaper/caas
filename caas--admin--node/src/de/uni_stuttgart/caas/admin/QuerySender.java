@@ -30,6 +30,9 @@ import de.uni_stuttgart.caas.messages.QueryResult;
 
 public class QuerySender {
 
+	// seconds
+	public static final int totalBenchmarkTime = 10;
+
 	public static void generateRandomQuery(String ip, int port, LogSender logger) {
 		QueryReceiver receiver = new QueryReceiver(logger, 1);
 		(new Thread(receiver)).start();
@@ -37,55 +40,74 @@ public class QuerySender {
 				.getLeastSignificantBits()), receiver);
 	}
 
-	public static void generateUniformlyDistributedQueries(final int numOfQueriesPerNode, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
-		ExecutorService executor = Executors.newFixedThreadPool(4);
-		// ExecutorCompletionService is nasty, so use a countdown to join on them
+	public static void generateUniformlyDistributedQueries(final int numOfQueriesPerNodeAndSecond, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+
+		// ExecutorCompletionService is nasty, so use a countdown to join on
+		// them
 		final CountDownLatch count = new CountDownLatch(nodes.size());
-		
-		final QueryReceiver receiver = new QueryReceiver(logger, numOfQueriesPerNode * nodes.size());
+		final int perNode = totalBenchmarkTime * numOfQueriesPerNodeAndSecond;
+		final int qcount = perNode * nodes.size();
+
+		final QueryReceiver receiver = new QueryReceiver(logger, qcount);
 		(new Thread(receiver)).start();
 		final String ip = receiver.getHost();
 		final int port = receiver.getPort();
-		
+
 		long id = 0;
 		for (final Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
 			final InetSocketAddress adr = e.getValue().ADDRESS_FOR_CACHENODE_QUERYLISTENER;
-			
+
 			final long localId = id;
-			id += numOfQueriesPerNode;
-			
+			id += perNode;
+
 			// serialize queries on one cache node to avoid exhausting them
-			executor.execute(new Runnable() {
+			Thread t = new Thread(new Runnable() {
 				@Override
 				public void run() {
 
-					for (int i = 0; i < numOfQueriesPerNode; ++i) {
+					long sleepError = 0;
+					for (int i = 0; i < perNode; ++i) {
+						final long time = System.nanoTime();
 						
-						// generate an uniformly random grid point					
+						// generate an uniformly random grid point
 						final QueryMessage m = new QueryMessage(Grid.RandomPoint(), ip, port, adr, localId + i);
 						sendQuery(m, receiver);
-						
+
+						// attempt to throttle request rate (far from accurate though)
+						final long timeEl = sleepError + (System.nanoTime() - time) / 1000000;
+						final long wait = 1000 / numOfQueriesPerNodeAndSecond - timeEl;
+
+						if (wait < 0) {
+							System.out.println("unable to produce queries this fast");
+						}
+
+						final long sleepTime = System.nanoTime();
 						try {
-							Thread.sleep(100);
+							Thread.sleep(Math.max(0, wait));
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-					}								
+						
+						final long timeSlept = (System.nanoTime() - sleepTime) / 1000000;
+						sleepError = timeSlept - wait;
+					}
 					count.countDown();
 				}
 			});
+			t.start();
 		}
-		
+
 		try {
 			count.await();
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 			assert false;
 		}
-		
+
 		receiver.join();
-		System.out.println("generateUniformlyDistributedQueries completed");
+		System.out.println("generateUniformlyDistributedQueries completed, " + qcount + " queries over " + totalBenchmarkTime + "s and " + nodes.size()
+				+ " nodes. " + perNode + " queries per node");
 	}
 
 	public static void generateQueriesWithRandomHotspotOneEntryPoint(int numOfQueries, Grid g, LogSender logger) {
@@ -163,17 +185,18 @@ public class QuerySender {
 			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 			r.waitForQuery(m, new Date());
 			out.writeObject(m);
-		
-			// bad idea, makes our benchmarking excessively slow - rather GC collect the socket.
-			//Thread.sleep(500);
-			//out.close();
-			//s.close();
+
+			// bad idea, makes our benchmarking excessively slow - rather GC
+			// collect the socket.
+			// Thread.sleep(500);
+			// out.close();
+			// s.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	//	} catch (InterruptedException e) {
-	//		e.printStackTrace();
-	//	}
+		// } catch (InterruptedException e) {
+		// e.printStackTrace();
+		// }
 	}
 
 	public static void main(String[] args) {
@@ -218,11 +241,11 @@ class QueryReceiver implements Runnable {
 		}
 		queries = new ConcurrentHashMap<>(numOfQueriesSent);
 	}
-	
+
 	public void join() {
 		try {
 			syncPoint.await();
-		} catch (InterruptedException e) {		
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		try {
@@ -260,31 +283,33 @@ class QueryReceiver implements Runnable {
 		while (!t.isInterrupted()) {
 			try {
 				Socket s = serverSocket.accept();
-				
-				// note: avoid the overhead of creating a thread here as the actual work
-				// we do here is less than 1/1000 of the cost of creating a thread.
+
+				// note: avoid the overhead of creating a thread here as the
+				// actual work
+				// we do here is less than 1/1000 of the cost of creating a
+				// thread.
 
 				ObjectInputStream in = new ObjectInputStream(s.getInputStream());
 				Object o = in.readObject();
 				Date d = new Date();
 				if (o instanceof QueryResult) {
-					
+
 					logger.write("Client received answer to a query");
 					QueryResult r = (QueryResult) o;
 					QueryLog l = queries.get(r.ID);
 					l.finishQuery(d, r.getDebuggingInfo().split("-"));
 					l.writeToFile(writer);
-					
+
 					syncPoint.countDown();
 				} else {
 					logger.write("Client didn't receive QueryResult but some other Object");
 				}
 				in.close();
 				s.close();
-				
+
 			} catch (IOException e) {
 				e.printStackTrace();
-			} catch (ClassNotFoundException e) {				
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
 		}
