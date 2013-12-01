@@ -41,7 +41,7 @@ public class QueryLog {
 				}
 			}
 			writer.newLine();
-			writer.flush();
+			//writer.flush(); // too slow to do this all the time (acg)
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
