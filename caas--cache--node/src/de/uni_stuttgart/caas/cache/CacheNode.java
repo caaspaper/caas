@@ -100,7 +100,7 @@ public class CacheNode {
 			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
 
-//		logger.write("Cache node started");
+		// logger.write("Cache node started");
 
 		// bind it to a random port since more than one CacheNode might reside
 		// on the same Computer
@@ -116,8 +116,8 @@ public class CacheNode {
 		}
 
 		String localHost = Inet4Address.getLocalHost().getHostAddress();
-		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(localHost, serverSocket.getLocalPort()),
-				new InetSocketAddress(localHost, queryListener.getPort())), new IResponseHandler() {
+		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(localHost, serverSocket.getLocalPort()), new InetSocketAddress(localHost,
+				queryListener.getPort())), new IResponseHandler() {
 
 			@Override
 			public void onResponseReceived(IMessage response) {
@@ -176,7 +176,7 @@ public class CacheNode {
 
 		MessageType type = message.getMessageType();
 
-//		logger.write("cache node: received: " + type);
+		// logger.write("cache node: received: " + type);
 
 		switch (currentState) {
 
@@ -210,7 +210,7 @@ public class CacheNode {
 			}
 
 			ConfirmationMessage response = onActivate();
-			if (response.STATUS_CODE == 0) {				
+			if (response.STATUS_CODE == 0) {
 				synchronized (activationMonitor) {
 					currentState = CacheNodeState.ACTIVE;
 					activationMonitor.notifyAll();
@@ -544,14 +544,13 @@ public class CacheNode {
 
 		assert currentState == CacheNodeState.ACTIVE;
 
-//		logger.write("processing Query");
+		// logger.write("processing Query");
 		message.appendToDebuggingInfo(id + "-");
 		if (!message.isPropagtionThroughNetworkAllowed()) {
 			logger.write("RECEIVED MESSAGE THAT I AM NOT ALLOWED TO PROPAGATE");
 			processQueryLocally(message);
 		}
 
-		
 		LocationOfNode queryLocation = message.QUERY_LOCATION;
 		Entry<NodeInfo, NeighborConnector> closestNodeToQuery = null, tempNode;
 
@@ -588,9 +587,9 @@ public class CacheNode {
 	}
 
 	private void sendMessageToNeighbor(QueryMessage message) {
-		
-		int randomNum = (int)(Math.random() * neighborConnectors.size());
-	
+
+		int randomNum = (int) (Math.random() * neighborConnectors.size());
+
 		for (NodeInfo n : neighborConnectors.keySet()) {
 			if (randomNum == 0) {
 				message.stopPropagationOfTheMessage();
@@ -598,7 +597,7 @@ public class CacheNode {
 				break;
 			}
 			--randomNum;
-			
+
 		}
 	}
 
@@ -636,35 +635,43 @@ public class CacheNode {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		} 
+		}
 		sendResultToClient(message);
 	}
 
-	private void sendResultToClient(QueryMessage message) {
+	private void sendResultToClient(final QueryMessage message) {
 
-		try {
-			Socket client = new Socket(message.CLIENT_IP, message.CLIENT_PORT);
+		Thread t = new Thread(new Runnable() {
+			// kick off an extra thread to make sure the cache node is not
+			// blocked out. In a benchmark scenario, this is important as we
+			// would otherwise be measuring the speed of the measurement device.
 
-			ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-			out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
-			
-			// note: this is the main message thread for this thread, so we are effectively 
-			// blocking the cache node by sleeping here. Let the GC collect the socket.
-			
-			/*
-			try {
-				Thread.sleep(500);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			@Override
+			public void run() {
+				try {
+					Socket client = new Socket(message.CLIENT_IP, message.CLIENT_PORT);
+
+					ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
+					out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
+
+					// note: this is the main message thread for this thread, so
+					// we are effectively
+					// blocking the cache node by sleeping here. Let the GC
+					// collect the socket.
+
+					/*
+					 * try { Thread.sleep(500); } catch (InterruptedException e)
+					 * { e.printStackTrace(); } out.close(); client.close();
+					 */
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-			out.close();
-			client.close();
-			*/
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		});
+		
+		t.start();
 	}
 
 	/**
@@ -716,9 +723,10 @@ public class CacheNode {
 		}
 		logger.write(queryProcessTimes.size() + " queries in the last second ******");
 		double load = (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
-//		for (Entry<NodeInfo, NeighborConnector> e : neighborConnectors.entrySet()) {
-//			e.getValue().sendMessageAsync(new LoadMessage(load));
-//		}
+		// for (Entry<NodeInfo, NeighborConnector> e :
+		// neighborConnectors.entrySet()) {
+		// e.getValue().sendMessageAsync(new LoadMessage(load));
+		// }
 		return load;
 	}
 
