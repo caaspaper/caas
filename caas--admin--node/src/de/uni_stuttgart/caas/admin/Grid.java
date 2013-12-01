@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
 
@@ -40,9 +41,25 @@ public class Grid {
 	 * bounds for the grid
 	 */
 	public static final int MAX_GRID_INDEX = 2000000000;
+
 	
 	public static LocationOfNode RandomPoint() {
-		return  new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX));
+		return new LocationOfNode((int) (Math.random() * MAX_GRID_INDEX), (int) (Math.random() * MAX_GRID_INDEX));
+	}
+	
+	
+	public static LocationOfNode CenterPoint() {
+		return new LocationOfNode(MAX_GRID_INDEX / 2, MAX_GRID_INDEX / 2);
+	}
+
+	
+	private static final Random r = new Random();
+	
+	public static LocationOfNode SampleGaussian(LocationOfNode center, double stddev) {
+		double x = 2 * r.nextGaussian() - 0.5;
+		double y = 2 * r.nextGaussian() - 0.5;
+		
+		return new LocationOfNode((int)(center.x - x * stddev * MAX_GRID_INDEX), (int)(center.y - y * stddev * MAX_GRID_INDEX));
 	}
 
 	/**
@@ -80,8 +97,7 @@ public class Grid {
 		LocationOfNode currentPoint = new LocationOfNode(0, 0);
 
 		for (JoinRequest j : joinRequests) {
-			while (pointToAddressMapping
-					.containsKey(currentPoint = RandomPoint())) {
+			while (pointToAddressMapping.containsKey(currentPoint = RandomPoint())) {
 			}
 			connectedNodes.put(j.ADDRESS, new NodeInfo(j.ADDRESS, currentPoint, j.NEIGHBORCONNECTOR_ADDRESS, j.QUERYLISTENER_ADDRESS, j.ID));
 			pointToAddressMapping.put(currentPoint, j.ADDRESS);
@@ -124,7 +140,8 @@ public class Grid {
 			throw new IllegalArgumentException("node already in triangulation");
 		}
 		LocationOfNode currentPoint = null;
-		while (pointToAddressMapping.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
+		while (pointToAddressMapping.containsKey(currentPoint = new LocationOfNode((int) (Math.random() * MAX_GRID_INDEX),
+				(int) (Math.random() * MAX_GRID_INDEX)))) {
 		}
 		addNewNode(address, currentPoint, neighborConnectorAddress, queryListenerAddress, id);
 	}
@@ -139,7 +156,8 @@ public class Grid {
 	 * @throws IllegalArgumentException
 	 *             if the address or point are already in triangulation
 	 */
-	public void addNewNode(InetSocketAddress address, LocationOfNode p, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress, long id) {
+	public void addNewNode(InetSocketAddress address, LocationOfNode p, InetSocketAddress neighborConnectorAddress, InetSocketAddress queryListenerAddress,
+			long id) {
 
 		if (connectedNodes.containsKey(address) || pointToAddressMapping.containsKey(p)) {
 			throw new IllegalArgumentException("Address or location of node are already in triangulation");
@@ -249,7 +267,7 @@ public class Grid {
 			if (p == null) {
 				return null;
 			}
-			return new LocationOfNode((int)p.x(), (int)p.y());
+			return new LocationOfNode((int) p.x(), (int) p.y());
 		}
 
 		public ArrayList<LocationOfNode> getNeighbors(LocationOfNode l) {
@@ -324,7 +342,7 @@ public class Grid {
 	public Vector<Triangle_dt> getTriangles() {
 		return triangulation.getTriangles();
 	}
-	
+
 	public Map<InetSocketAddress, NodeInfo> getConnectedNodes() {
 		return connectedNodes;
 	}

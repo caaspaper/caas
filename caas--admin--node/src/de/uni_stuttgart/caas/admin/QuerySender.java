@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -40,10 +41,9 @@ public class QuerySender {
 				.getLeastSignificantBits()), receiver);
 	}
 
-	public static void generateUniformlyDistributedQueries(final int numOfQueriesPerNodeAndSecond, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger) {
+	public static void generateDistributedQueries(final int numOfQueriesPerNodeAndSecond, Map<InetSocketAddress, NodeInfo> nodes, LogSender logger,
+			final boolean uniform) {
 
-		// ExecutorCompletionService is nasty, so use a countdown to join on
-		// them
 		final CountDownLatch count = new CountDownLatch(nodes.size());
 		final int perNode = totalBenchmarkTime * numOfQueriesPerNodeAndSecond;
 		final int qcount = perNode * nodes.size();
@@ -52,6 +52,10 @@ public class QuerySender {
 		(new Thread(receiver)).start();
 		final String ip = receiver.getHost();
 		final int port = receiver.getPort();
+
+		// always place the hotspot in the center of the grid as to avoid
+		// another random variable in the game.
+		final LocationOfNode hotspot = Grid.CenterPoint();
 
 		long id = 0;
 		for (final Entry<InetSocketAddress, NodeInfo> e : nodes.entrySet()) {
@@ -68,12 +72,24 @@ public class QuerySender {
 					long sleepError = 0;
 					for (int i = 0; i < perNode; ++i) {
 						final long time = System.nanoTime();
-						
+
+						LocationOfNode point;
+						if (uniform) {
+							point = Grid.RandomPoint();
+						} else {
+							// in accordance with carlos' paper, do a gauss
+							// distribution with a standard deviation of 0.3 the
+							// grid size
+							// TODO: is a poisson distribution a better model?
+							point = Grid.SampleGaussian(hotspot, 0.3);
+						}
+
 						// generate an uniformly random grid point
-						final QueryMessage m = new QueryMessage(Grid.RandomPoint(), ip, port, adr, localId + i);
+						final QueryMessage m = new QueryMessage(point, ip, port, adr, localId + i);
 						sendQuery(m, receiver);
 
-						// attempt to throttle request rate (far from accurate though)
+						// attempt to throttle request rate (far from accurate
+						// though)
 						final long timeEl = sleepError + (System.nanoTime() - time) / 1000000;
 						final long wait = 1000 / numOfQueriesPerNodeAndSecond - timeEl;
 
@@ -88,7 +104,7 @@ public class QuerySender {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-						
+
 						final long timeSlept = (System.nanoTime() - sleepTime) / 1000000;
 						sleepError = timeSlept - wait;
 					}
@@ -302,7 +318,7 @@ class QueryReceiver implements Runnable {
 
 					syncPoint.countDown();
 					long l1 = syncPoint.getCount();
-					if(l1 % 100 == 0 || l1 < 50) {
+					if (l1 % 100 == 0 || l1 < 50) {
 						System.out.println(syncPoint.getCount());
 					}
 				} else {

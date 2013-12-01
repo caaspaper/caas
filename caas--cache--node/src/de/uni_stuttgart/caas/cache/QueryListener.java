@@ -38,9 +38,7 @@ public class QueryListener implements Runnable {
 				clientSocket = serverSocket.accept();
 				logger.write("client connected requesting data");
 				
-				// no thread here - this is too expensive and we do not typically block for long
-				//new Thread(new ListenerThread(clientSocket)).start();
-				
+				// no thread here - this is too expensive and we do not typically block for long			
 				Runnable r = new ListenerThread(clientSocket);
 				r.run();
 				

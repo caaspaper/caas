@@ -371,8 +371,19 @@ public class AdminNode /* implements AutoClosable */{
 		
 			@Override
 			public void run() {
-				QuerySender.generateUniformlyDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger);
-				
+				QuerySender.generateDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger, true);
+			}
+		});	
+		t.start();
+	}
+	
+	public void generateQueriesUniformlyDistributedHotspot(final int numOfQueriesPerNode) {
+		
+		Thread t = new Thread(new Runnable() {
+		
+			@Override
+			public void run() {
+				QuerySender.generateDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger, false);
 			}
 		});	
 		t.start();
