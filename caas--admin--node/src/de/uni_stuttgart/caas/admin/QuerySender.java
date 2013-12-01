@@ -6,9 +6,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -51,7 +53,17 @@ public class QuerySender {
 
 		final QueryReceiver receiver = new QueryReceiver(logger, qcount);
 		(new Thread(receiver)).start();
-		final String ip = receiver.getHost();
+		
+		String tempHost = "";
+		try {
+			tempHost = Inet4Address.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e2) {
+			e2.printStackTrace();
+			assert false;
+			return;
+		};
+		
+		final String localHost = tempHost;
 		final int port = receiver.getPort();
 
 		// always place the hotspot in the center of the grid as to avoid
@@ -86,7 +98,7 @@ public class QuerySender {
 						}
 
 						// generate an uniformly random grid point
-						final QueryMessage m = new QueryMessage(point, ip, port, adr, localId + i);
+						final QueryMessage m = new QueryMessage(point, localHost, port, adr, localId + i);
 						sendQuery(m, receiver);
 
 						// attempt to throttle request rate (far from accurate
