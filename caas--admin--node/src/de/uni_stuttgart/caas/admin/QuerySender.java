@@ -60,7 +60,9 @@ public class QuerySender {
 				public void run() {
 
 					for (int i = 0; i < numOfQueriesPerNode; ++i) {
-						final QueryMessage m = new QueryMessage(e.getValue().getLocationOfNode(), ip, port, adr, localId + i);
+						
+						// generate an uniformly random grid point					
+						final QueryMessage m = new QueryMessage(Grid.RandomPoint(), ip, port, adr, localId + i);
 						sendQuery(m, receiver);
 					}								
 					count.countDown();
@@ -260,7 +262,6 @@ class QueryReceiver implements Runnable {
 					logger.write("Client received answer to a query");
 					QueryResult r = (QueryResult) o;
 					QueryLog l = queries.get(r.ID);
-					System.out.println(r.getDebuggingInfo());
 					l.finishQuery(d, r.getDebuggingInfo().split("-"));
 					l.writeToFile(writer);
 					

@@ -40,6 +40,10 @@ public class Grid {
 	 * bounds for the grid
 	 */
 	public static final int MAX_GRID_INDEX = 2000000000;
+	
+	public static LocationOfNode RandomPoint() {
+		return  new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX));
+	}
 
 	/**
 	 * number of connections
@@ -77,7 +81,7 @@ public class Grid {
 
 		for (JoinRequest j : joinRequests) {
 			while (pointToAddressMapping
-					.containsKey(currentPoint = new LocationOfNode((int)(Math.random() * MAX_GRID_INDEX), (int)(Math.random() * MAX_GRID_INDEX)))) {
+					.containsKey(currentPoint = RandomPoint())) {
 			}
 			connectedNodes.put(j.ADDRESS, new NodeInfo(j.ADDRESS, currentPoint, j.NEIGHBORCONNECTOR_ADDRESS, j.QUERYLISTENER_ADDRESS, j.ID));
 			pointToAddressMapping.put(currentPoint, j.ADDRESS);
