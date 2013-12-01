@@ -301,6 +301,10 @@ class QueryReceiver implements Runnable {
 					l.writeToFile(writer);
 
 					syncPoint.countDown();
+					long l1 = syncPoint.getCount();
+					if(l1 % 100 == 0 || l1 < 50) {
+						System.out.println(syncPoint.getCount());
+					}
 				} else {
 					logger.write("Client didn't receive QueryResult but some other Object");
 				}
