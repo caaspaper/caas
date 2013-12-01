@@ -64,6 +64,13 @@ public class QuerySender {
 						// generate an uniformly random grid point					
 						final QueryMessage m = new QueryMessage(Grid.RandomPoint(), ip, port, adr, localId + i);
 						sendQuery(m, receiver);
+						
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}								
 					count.countDown();
 				}
@@ -156,14 +163,17 @@ public class QuerySender {
 			ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
 			r.waitForQuery(m, new Date());
 			out.writeObject(m);
-			Thread.sleep(500);
-			out.close();
-			s.close();
+		
+			// bad idea, makes our benchmarking excessively slow - rather GC collect the socket.
+			//Thread.sleep(500);
+			//out.close();
+			//s.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
+	//	} catch (InterruptedException e) {
+	//		e.printStackTrace();
+	//	}
 	}
 
 	public static void main(String[] args) {
