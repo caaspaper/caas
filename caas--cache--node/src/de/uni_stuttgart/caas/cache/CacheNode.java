@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.FullDuplexMPI.IResponseHandler;
 import de.uni_stuttgart.caas.base.LocationOfNode;
@@ -98,7 +99,7 @@ public class CacheNode {
 			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
 
-		logger.write("Cache node started");
+//		logger.write("Cache node started");
 
 		// bind it to a random port since more than one CacheNode might reside
 		// on the same Computer
@@ -173,7 +174,7 @@ public class CacheNode {
 
 		MessageType type = message.getMessageType();
 
-		logger.write("cache node: received: " + type);
+//		logger.write("cache node: received: " + type);
 
 		switch (currentState) {
 
@@ -248,7 +249,7 @@ public class CacheNode {
 		if (currentState == CacheNodeState.DEAD) {
 			return;
 		}
-		System.out.println("cache node: shutting down");
+		logger.write("cache node: shutting down");
 		currentState = CacheNodeState.DEAD;
 		connectionToAdmin.close();
 		// free up the reference
@@ -469,6 +470,13 @@ public class CacheNode {
 			} else if (kind == MessageType.PUBLISH_ID) {
 				onReceiveId((PublishIdMessage) message);
 				return new ConfirmationMessage(0, "id received");
+			} else if (kind == MessageType.LOAD_MESSAGE) {
+				for (NodeInfo n : neighborConnectors.keySet()) {
+					if (n.ID == nid) {
+						n.setLoad(((LoadMessage) message).LOAD);
+						break;
+					}
+				}
 			} else {
 				logger.write("cache node: unexpected neighbor message, reveived message was: " + message.getMessageType());
 			}
@@ -532,11 +540,9 @@ public class CacheNode {
 			}
 		}
 
-		logger.write("processing Query");
-
 		assert currentState == CacheNodeState.ACTIVE;
 
-		logger.write("processing Query");
+//		logger.write("processing Query");
 		message.appendToDebuggingInfo(id + "-");
 		if (!message.isPropagtionThroughNetworkAllowed()) {
 			logger.write("RECEIVED MESSAGE THAT I AM NOT ALLOWED TO PROPAGATE");
@@ -707,7 +713,11 @@ public class CacheNode {
 			}
 		}
 		logger.write(queryProcessTimes.size() + " queries in the last second ******");
-		return queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
+		double load = (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
+//		for (Entry<NodeInfo, NeighborConnector> e : neighborConnectors.entrySet()) {
+//			e.getValue().sendMessageAsync(new LoadMessage(load));
+//		}
+		return load;
 	}
 
 	/**

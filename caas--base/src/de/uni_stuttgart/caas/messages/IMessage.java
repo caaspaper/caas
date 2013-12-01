@@ -46,6 +46,11 @@ public interface IMessage extends Serializable {
 		 * identify themselves. 
 		 */
 		PUBLISH_ID,
+		
+		/**
+		 * used to exchange information about load of a node
+		 */
+		LOAD_MESSAGE
 	}
 
 	/**
