@@ -32,7 +32,23 @@ public class CacheNode {
 	 * Number of connections per second allowed before the node starts
 	 * forwarding queries to neighbors.
 	 */
-	public final int MAX_QUERIES_PER_SECOND = 20;
+	public static final int MAX_QUERIES_PER_SECOND = 20;
+
+	/**
+	 * Fake time for processing a query if the query produces a cache hit
+	 * respectively a cache miss, in milliseconds.
+	 */
+	public static final int QUERY_PROCESSING_TIME_HIT = 1000 / MAX_QUERIES_PER_SECOND;
+	public static final int QUERY_PROCESSING_TIME_MISS = QUERY_PROCESSING_TIME_HIT * 10;
+
+	/**
+	 * Fake latency introduced into any messages received from neighboring nodes
+	 * to simulate a real, physical network instead of loopback. Set to 0 if the
+	 * grid is tested on an actual physical network. The units is milliseconds.
+	 */
+	public static final int FAKE_NEIGHBOR_LATENCY = 2;
+
+	/** Default port to send log messages to on the logging node */
 	public static final int DEFAULT_LOG_RECEIVER_PORT = 43215;
 
 	/**
@@ -366,7 +382,7 @@ public class CacheNode {
 				// (hack) extra penalty to simulate latency in a real, physical
 				// network
 				try {
-					Thread.sleep(2);
+					Thread.sleep(FAKE_NEIGHBOR_LATENCY);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -587,9 +603,9 @@ public class CacheNode {
 		// load over a sliding window of recent queries.
 		queryProcessTimes.add(System.currentTimeMillis());
 
-		// TODO: simulate cache behaviour
+		// TODO: simulate real caching behaviour ...
 		try {
-			Thread.sleep(50);
+			Thread.sleep(QUERY_PROCESSING_TIME_HIT);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
