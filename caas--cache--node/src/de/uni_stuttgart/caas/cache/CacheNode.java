@@ -10,7 +10,6 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -24,42 +23,42 @@ import de.uni_stuttgart.caas.messages.*;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
 
 /**
- * Class representing the cache node
+ * CacheNode - stand-alone runnable single node of the distributed cache
+ * overlay.
  */
 public class CacheNode {
 
 	/**
-	 * Number of connections per second allowed before the node starts tasking
-	 * neighbors with the query
+	 * Number of connections per second allowed before the node starts
+	 * forwarding queries to neighbors.
 	 */
 	public final int MAX_QUERIES_PER_SECOND = 20;
-
 	public static final int DEFAULT_LOG_RECEIVER_PORT = 43215;
 
 	/**
-	 * Cache id, which is unique within the grid and assigned during init
+	 * Cache id, which is unique within the grid and assigned during initial
 	 * handshake
 	 */
 	public long id = -1;
 
 	/**
-	 * List containing timestamps of the last requests to calculate the load on
-	 * the cache node
+	 * List containing time stamps of the most recent queries to calculate the
+	 * load on the cache node. Too old entries are removed during getLoad().
 	 */
 	private volatile LinkedBlockingQueue<Long> queryProcessTimes;
 
 	/**
-	 * position of this node
+	 * Position of this node in the grid
 	 */
 	private LocationOfNode position;
 
 	/**
-	 * neighboring nodes
+	 * List of neighboring nodes, keyed by their address info
 	 */
 	private HashMap<NodeInfo, NeighborConnector> neighborConnectors;
 
 	/**
-	 * current state - volatile because it is read and written to concurrently.
+	 * Current state - volatile because it is read and written to concurrently
 	 */
 	private volatile CacheNodeState currentState = CacheNodeState.INITIAL_STATE;
 
@@ -74,22 +73,22 @@ public class CacheNode {
 	private LogSender logger;
 
 	/**
-	 * ServerSocket for connections with other CacheNodes
+	 * ServerSocket for the handshake with neighbor nodes to establish
+	 * connections.
 	 */
 	private ServerSocket serverSocket;
 
 	/**
-	 * listens for new querys from clients
+	 * Listener for incoming queries from outside the grid.
 	 */
 	private QueryListener queryListener;
-
 	private final Object activationMonitor = new Object();
 
 	/**
 	 * Construct a new cache node given the address of the admin node
 	 * 
 	 * @param addr
-	 *            the address of the admin node
+	 *            address info of the admin node
 	 * @throws IOException
 	 */
 	public CacheNode(InetSocketAddress addr) throws IOException {
@@ -100,39 +99,24 @@ public class CacheNode {
 			throw new IllegalArgumentException("unresolved host: " + addr);
 		}
 
-		// logger.write("Cache node started");
-
 		// bind it to a random port since more than one CacheNode might reside
 		// on the same Computer
 		serverSocket = new ServerSocket(0);
-		queryListener = new QueryListener(this, logger);
-		(new Thread(queryListener)).start();
-		int port = queryListener.getPort();
+		new Thread(queryListener = new QueryListener(this, logger)).start();
+
+		final int port = queryListener.getPort();
 		logger.write("listening for queries on port" + port);
+
+		// constructing the AdminConnector fires up the CacheNode's lifecycle
 		try {
 			connectionToAdmin = new AdminConnector(addr);
 		} catch (IOException e) {
 			throw new IOException("Could not connect to server", e);
 		}
-
-		String localHost = Inet4Address.getLocalHost().getHostAddress();
-		connectionToAdmin.sendMessageAsync(new JoinMessage(new InetSocketAddress(localHost, serverSocket.getLocalPort()), new InetSocketAddress(localHost,
-				queryListener.getPort())), new IResponseHandler() {
-
-			@Override
-			public void onResponseReceived(IMessage response) {
-				process(response);
-			}
-
-			@Override
-			public void onConnectionAborted() {
-				logger.write("cache node: connection to admin was closed");
-			}
-		});
 	}
 
 	/**
-	 * Constructs a new CacheNode given a host and a port
+	 * Constructs a new CacheNode given a host and a port of the admin node
 	 * 
 	 * @param host
 	 *            the hostname or ip of the admin node
@@ -140,95 +124,7 @@ public class CacheNode {
 	 *            the port, the admin is running on
 	 */
 	public CacheNode(String host, int port) throws IOException {
-
 		this(new InetSocketAddress(host, port));
-	}
-
-	/**
-	 * Add a new neighboring node
-	 * 
-	 * @param newNode
-	 *            The new node to add
-	 */
-	private void addNeighbor(NodeInfo newNode) {
-
-		if (!neighborConnectors.containsKey(newNode)) {
-			neighborConnectors.put(newNode, null);
-			// TODO: establish a connection with that node
-		}
-	}
-
-	/**
-	 * Remove a neighboring node
-	 * 
-	 * @param node
-	 *            The node to remove
-	 */
-	private void removeNeighbor(NodeInfo node) {
-		neighborConnectors.remove(node);
-		// TODO: kill connection with that node
-	}
-
-	public IMessage process(IMessage message) {
-		if (currentState == CacheNodeState.DEAD) {
-			return null;
-		}
-
-		MessageType type = message.getMessageType();
-
-		// logger.write("cache node: received: " + type);
-
-		switch (currentState) {
-
-		case INITIAL_STATE:
-			if (type != MessageType.CONFIRM) {
-				logger.write("Error in Protocol");
-			}
-			ConfirmationMessage confirm = (ConfirmationMessage) message;
-			if (confirm.STATUS_CODE != 0) {
-				logger.write("cache node: failure, reveived message was: " + confirm.MESSAGE);
-				// not so graceful shutdown
-				close();
-				return null;
-			}
-			currentState = CacheNodeState.AWAITING_DATA;
-			return null;
-
-		case AWAITING_DATA:
-
-			if (type != MessageType.ADD_TO_GRID) {
-				logger.write("Error in Protocol");
-			}
-			proccessAddToGridMessage((AddToGridMessage) message);
-			currentState = CacheNodeState.AWAITING_ACTIVATION;
-			return new ConfirmationMessage(0, "Added neighbors");
-
-		case AWAITING_ACTIVATION:
-
-			if (type != MessageType.ACTIVATE) {
-				logger.write("Error in Protocol");
-			}
-
-			ConfirmationMessage response = onActivate();
-			if (response.STATUS_CODE == 0) {
-				synchronized (activationMonitor) {
-					currentState = CacheNodeState.ACTIVE;
-					activationMonitor.notifyAll();
-				}
-			} else {
-				// TODO - introduce failure state?
-			}
-			return response;
-
-		case ACTIVE:
-			// TODO what comes here?
-			break;
-
-		default:
-			logger.write("Error in Protocol");
-		}
-
-		return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
 	}
 
 	/**
@@ -238,14 +134,14 @@ public class CacheNode {
 	 *            the AddToGridMessage
 	 */
 	private void proccessAddToGridMessage(AddToGridMessage message) {
-
 		this.id = message.id;
 		this.position = message.locationOfNode;
 		addNeighboringNodes(message.getNeighboringNodes());
 	}
 
 	/**
-	 * Used to stop an active cache node
+	 * Kills the node immediately, there is no notifications to neighbors so
+	 * they have to deal with getting connection failures.
 	 */
 	public void close() {
 		if (currentState == CacheNodeState.DEAD) {
@@ -266,7 +162,7 @@ public class CacheNode {
 	 */
 	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodesSource) {
 		// store nodes for now. Later, in onActivate(), we establish connections
-		// to them
+		// to all of them
 		neighborConnectors = new HashMap<>();
 		for (NodeInfo info : neighboringNodesSource) {
 			neighborConnectors.put(info, null);
@@ -275,7 +171,7 @@ public class CacheNode {
 
 	/**
 	 * Determine the number of neighbor connections for which this node has the
-	 * server role.
+	 * server role during the initial neighbor handshake.
 	 * 
 	 * @return [0, |neighbors|]
 	 */
@@ -467,7 +363,8 @@ public class CacheNode {
 			logger.write("cache node: received: " + kind + " from neighbor connection " + toString());
 
 			if (kind == MessageType.QUERY_MESSAGE) {
-				// (hack) extra penalty to simulate latency in a real, physical network
+				// (hack) extra penalty to simulate latency in a real, physical
+				// network
 				try {
 					Thread.sleep(2);
 				} catch (InterruptedException e) {
@@ -499,7 +396,8 @@ public class CacheNode {
 	}
 
 	/**
-	 * This class is responsible for the interaction with the adminNode
+	 * Communication channel to the administrator node, responsible for handling
+	 * the cache node's lifetime state transitions.
 	 */
 	private class AdminConnector extends FullDuplexMPI {
 
@@ -513,20 +411,91 @@ public class CacheNode {
 		 */
 		public AdminConnector(InetSocketAddress address) throws IOException {
 			super(new Socket(address.getAddress(), address.getPort()), System.out, true);
+
+			final String localHost = Inet4Address.getLocalHost().getHostAddress();
+			final InetSocketAddress neighborAdr = new InetSocketAddress(localHost, serverSocket.getLocalPort());
+			final InetSocketAddress queryAdr = new InetSocketAddress(localHost, queryListener.getPort());
+
+			sendMessageAsync(new JoinMessage(neighborAdr, queryAdr), new IResponseHandler() {
+
+				@Override
+				public void onResponseReceived(IMessage response) {
+					processIncomingMessage(response);
+				}
+
+				@Override
+				public void onConnectionAborted() {
+					logger.write("cache node: connection to admin was closed");
+				}
+			});
 		}
 
 		@Override
 		public IMessage processIncomingMessage(IMessage message) {
-			final IMessage response = process(message);
-			assert response != null;
-			return response;
-		}
+			assert message != null;
+			if (currentState == CacheNodeState.DEAD) {
+				return null;
+			}
 
+			MessageType type = message.getMessageType();
+
+			// logger.write("cache node: received: " + type);
+			switch (currentState) {
+
+			case INITIAL_STATE:
+				if (type != MessageType.CONFIRM) {
+					logger.write("Error in Protocol");
+				}
+				ConfirmationMessage confirm = (ConfirmationMessage) message;
+				if (confirm.STATUS_CODE != 0) {
+					logger.write("cache node: failure, reveived message was: " + confirm.MESSAGE);
+					// not so graceful shutdown
+					close();
+					return null;
+				}
+				currentState = CacheNodeState.AWAITING_DATA;
+				return null;
+
+			case AWAITING_DATA:
+
+				if (type != MessageType.ADD_TO_GRID) {
+					logger.write("Error in Protocol");
+				}
+				proccessAddToGridMessage((AddToGridMessage) message);
+				currentState = CacheNodeState.AWAITING_ACTIVATION;
+				return new ConfirmationMessage(0, "Added neighbors");
+
+			case AWAITING_ACTIVATION:
+
+				if (type != MessageType.ACTIVATE) {
+					logger.write("Error in Protocol");
+				}
+
+				ConfirmationMessage response = onActivate();
+				if (response.STATUS_CODE == 0) {
+					synchronized (activationMonitor) {
+						currentState = CacheNodeState.ACTIVE;
+						activationMonitor.notifyAll();
+					}
+				} else {
+					// TODO - introduce failure state?
+				}
+				return response;
+
+			case ACTIVE:
+				// TODO what comes here?
+				break;
+
+			default:
+				logger.write("Error in Protocol");
+			}
+			return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
+		}
 	}
 
 	/**
-	 * Method that processes the queries it receives and forwards them to the
-	 * right neighbor
+	 * Processes a query either by fetching the result, or by forwarding/routing
+	 * it to a different node.
 	 */
 	public void processQuery(QueryMessage message) {
 
@@ -550,10 +519,9 @@ public class CacheNode {
 
 		assert currentState == CacheNodeState.ACTIVE;
 
-		// logger.write("processing Query");
 		message.appendToDebuggingInfo(id + "-");
 		if (!message.isPropagtionThroughNetworkAllowed()) {
-			logger.write("RECEIVED MESSAGE THAT I AM NOT ALLOWED TO PROPAGATE");
+			logger.write("got forwarded message, no further propagation possible");
 			processQueryLocally(message);
 			return;
 		}
@@ -577,23 +545,21 @@ public class CacheNode {
 		}
 
 		if (minDistance < calculateDistance(position, queryLocation)) {
+			// greedy routing
 			closestNodeToQuery.getValue().sendMessageAsync(message);
 		} else {
-
-			/*
-			 * TODO process node locally if the current load is to high, send
-			 * query to a close neighbor
-			 */
 			if (getLoad() > 1) {
-				logger.write("******Load exeeded allowed value*******");
-				sendMessageToNeighbor(message);
+				logger.write("forwarding message as local load is too high");
+				forwardMessageToNeighbor(message);
 			} else {
 				processQueryLocally(message);
 			}
 		}
 	}
 
-	private void sendMessageToNeighbor(QueryMessage message) {
+	/** Forwards a query to a random neighbor and prevents further propagation */
+	private void forwardMessageToNeighbor(QueryMessage message) {
+		assert message != null;
 
 		int randomNum = (int) (Math.random() * neighborConnectors.size());
 
@@ -604,51 +570,40 @@ public class CacheNode {
 				break;
 			}
 			--randomNum;
-
 		}
 	}
 
 	/**
-	 * Processes an incoming query from outside the network and wraps it's
-	 * information into a QueryMessage that is used internally
-	 * 
-	 * @param query
-	 *            the actual query
-	 * @param ip
-	 *            , port The address to send the response to
-	 */
-	public void processIncomingQueryToAdaptItToNetwork(Object query, String ip, int port) {
-
-		LocationOfNode randomLocation = new LocationOfNode((int) Math.random() * 2000000000, (int) Math.random() * 2000000000);
-		QueryMessage newMessage = new QueryMessage(randomLocation, ip, port, UUID.randomUUID().getMostSignificantBits());
-		logger.write("received new query from " + ip + ":" + port + " for " + randomLocation);
-		processQuery(newMessage);
-	}
-
-	/**
-	 * This method processes the query on this node. Since we are not really
-	 * serving the cache, we can simulate the cache by sleeping for some time
-	 * TODO DO NOT SLEEP REPLACE WITH GETTING THE DATA FROM THE CACHE
+	 * This method processes the query on this node and ensures a result is
+	 * returned to the client. Since we are not really serving the cache, we can
+	 * simulate the cache by sleeping for some time
 	 * 
 	 * @param message
 	 */
 	private void processQueryLocally(QueryMessage message) {
+		assert message != null;
 
 		// remember the message's time of processing so we can calculate the
-		// load
+		// load over a sliding window of recent queries.
 		queryProcessTimes.add(System.currentTimeMillis());
 
+		// TODO: simulate cache behaviour
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		sendResultToClient(message);
+		sendQueryResultToClient(message);
 	}
 
-	private void sendResultToClient(final QueryMessage message) {
+	/**
+	 * Send a processed query result back to the client where the query
+	 * originated. Right now, the response is a dummy.
+	 * */
+	private void sendQueryResultToClient(final QueryMessage message) {
+		assert message != null;
 
-		Thread t = new Thread(new Runnable() {
+		new Thread(new Runnable() {
 			// kick off an extra thread to make sure the cache node is not
 			// blocked out. In a benchmark scenario, this is important as we
 			// would otherwise be measuring the speed of the measurement device.
@@ -661,11 +616,8 @@ public class CacheNode {
 					ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
 					out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
 
-					// note: this is the main message thread for this thread, so
-					// we are effectively
-					// blocking the cache node by sleeping here. Let the GC
-					// collect the socket.
-
+					// note: Let the GC collect the socket ... closing
+					// immediately can cause writeObject to fail
 					/*
 					 * try { Thread.sleep(500); } catch (InterruptedException e)
 					 * { e.printStackTrace(); } out.close(); client.close();
@@ -676,14 +628,12 @@ public class CacheNode {
 					e.printStackTrace();
 				}
 			}
-		});
-		
-		t.start();
+		}).start();
 	}
 
 	/**
-	 * Helper method to calculate the distance between a queryLocation and a
-	 * CacheNode center
+	 * Helper method to calculate the square distance between a queryLocation
+	 * and a CacheNode center
 	 * 
 	 * @param node
 	 *            the cacheNode
@@ -691,13 +641,12 @@ public class CacheNode {
 	 *            the queryLocation
 	 * @return the distance between the node and the location of the query
 	 */
-	private double calculateDistance(NodeInfo node, LocationOfNode queryLocation) {
-
+	private static final double calculateDistance(NodeInfo node, LocationOfNode queryLocation) {
 		return calculateDistance(node.getLocationOfNode(), queryLocation);
 	}
 
 	/**
-	 * Helper method to calculate the distance between to points
+	 * Helper method to calculate the square distance between to points
 	 * 
 	 * @param a
 	 *            first point
@@ -705,22 +654,18 @@ public class CacheNode {
 	 *            second point
 	 * @return the distance between the two points
 	 */
-	private double calculateDistance(LocationOfNode a, LocationOfNode b) {
-
+	private static final double calculateDistance(LocationOfNode a, LocationOfNode b) {
 		return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
 	}
 
 	/**
-	 * Calculates the load of the cache node A higher value means a higher load
-	 * 
-	 * NOTE: when the calculation changes, processQuery() has to be changed
-	 * accordingly!!!
+	 * Calculates the approximate current load of the cache node A higher value
+	 * means a higher load.
 	 * 
 	 * @return a double representing the load
 	 */
 	public double getLoad() {
-
-		long currentTime = System.currentTimeMillis();
+		final long currentTime = System.currentTimeMillis();
 		while (!queryProcessTimes.isEmpty()) {
 			if (currentTime - queryProcessTimes.peek() > 1000) {
 				queryProcessTimes.poll();
@@ -728,17 +673,11 @@ public class CacheNode {
 				break;
 			}
 		}
-		logger.write(queryProcessTimes.size() + " queries in the last second ******");
-		double load = (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
-		// for (Entry<NodeInfo, NeighborConnector> e :
-		// neighborConnectors.entrySet()) {
-		// e.getValue().sendMessageAsync(new LoadMessage(load));
-		// }
-		return load;
+		return (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
 	}
 
 	/**
-	 * For starting the cacheNode from the command line
+	 * Standalone main() for running a cacheNode from the command line
 	 * 
 	 * @param args
 	 *            the ip address of the admin and the port, the admin is
@@ -754,5 +693,4 @@ public class CacheNode {
 			e.printStackTrace();
 		}
 	}
-
 }

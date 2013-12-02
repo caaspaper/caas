@@ -84,30 +84,16 @@ public class QueryListener implements Runnable {
 		@Override
 		public void run() {
 			try {
-				// out not used, but needed for inputStream
-				//ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
 				ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-				String ip = "";
-				int port = 0;
+	
 				Object o = in.readObject();
 				if (o instanceof QueryMessage) {
 					logger.write("passing QueryMessage to CacheNode");
 					cacheNode.processQuery((QueryMessage) o);
-				} else {
-					if (o instanceof String) {
-						ip = (String) o;
-					} else {
-						System.err.println("FATAL ERROR");
-					}
-					o = in.readObject();
-					if (o instanceof Integer) {
-						port = (int) o;
-					} else {
-						System.err.println("FATAL ERROR");
-					}
-					processQuery(null, ip, port);
+				} 
+				else {
+					assert false;
 				}
-				//out.close();
 				in.close();
 				clientSocket.close();
 			} catch (IOException e) {
@@ -115,11 +101,6 @@ public class QueryListener implements Runnable {
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			} 
-		}
-		
-		protected void processQuery(Object o, String ip, int port) {
-			logger.write("giving request to CacheNode");
-			cacheNode.processIncomingQueryToAdaptItToNetwork(null, ip, port);
 		}
 	}
 
