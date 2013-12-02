@@ -56,8 +56,8 @@ public class Grid {
 	private static final Random r = new Random();
 	
 	public static LocationOfNode SampleGaussian(LocationOfNode center, double stddev) {
-		double x = 2 * r.nextGaussian() - 0.5;
-		double y = 2 * r.nextGaussian() - 0.5;
+		final double x = r.nextGaussian();
+		final double y = r.nextGaussian();
 		
 		return new LocationOfNode((int)(center.x - x * stddev * MAX_GRID_INDEX), (int)(center.y - y * stddev * MAX_GRID_INDEX));
 	}
