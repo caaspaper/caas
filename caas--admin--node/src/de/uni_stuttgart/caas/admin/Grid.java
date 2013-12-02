@@ -7,11 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
-
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
@@ -169,7 +167,7 @@ public class Grid {
 	}
 
 	/**
-	 * update location of a node
+	 * update location of a node triggering a triangulation update
 	 * 
 	 * @param address
 	 *            the address of the node
@@ -182,6 +180,19 @@ public class Grid {
 		pointToAddressMapping.remove(oldLocation);
 		pointToAddressMapping.put(newLocation, address);
 		triangulation.updatePoint(oldLocation, newLocation);
+	}
+	
+	/**
+	 * updates location locally, does NOT update triangulation!
+	 * 
+	 * @param newInfo 
+	 * 				new node information
+	 * @param oldInfo 
+	 * 				old node information
+	 */
+	public void updateLocationOfNode(NodeInfo newInfo, NodeInfo oldInfo) {
+		connectedNodes.put(newInfo.NODE_ADDRESS, newInfo);
+		pointToAddressMapping.put(newInfo.getLocationOfNode(), pointToAddressMapping.remove(oldInfo.getLocationOfNode()));
 	}
 
 	/**

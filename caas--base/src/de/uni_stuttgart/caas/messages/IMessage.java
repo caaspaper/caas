@@ -50,7 +50,12 @@ public interface IMessage extends Serializable {
 		/**
 		 * used to exchange information about load of a node
 		 */
-		LOAD_MESSAGE
+		LOAD_MESSAGE,
+		
+		/**
+		 * used to update location information
+		 */
+		CACHENODE_UPDATE_MESSAGE
 	}
 
 	/**

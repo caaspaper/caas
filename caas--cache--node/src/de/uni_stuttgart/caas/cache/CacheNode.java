@@ -485,6 +485,12 @@ public class CacheNode {
 						break;
 					}
 				}
+				return new ConfirmationMessage(0, "Load value updated");
+			} else if (kind == MessageType.CACHENODE_UPDATE_MESSAGE) {
+				NodeInfo updatedInfo = ((CacheNodeUpdateMessage) message).newInfo;
+				NodeInfo oldInfo = ((CacheNodeUpdateMessage) message).oldInfo;
+				neighborConnectors.put(updatedInfo, neighborConnectors.get(oldInfo));
+				return new ConfirmationMessage(0, "updated NodeInformation");
 			} else {
 				logger.write("cache node: unexpected neighbor message, reveived message was: " + message.getMessageType());
 			}

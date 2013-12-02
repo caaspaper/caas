@@ -8,11 +8,14 @@ import java.util.Vector;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import de.uni_stuttgart.caas.admin.JoinRequestManager.JoinRequest;
 import de.uni_stuttgart.caas.base.FullDuplexMPI;
 import de.uni_stuttgart.caas.base.LogSender;
+import de.uni_stuttgart.caas.base.NodeInfo;
 import de.uni_stuttgart.caas.messages.ActivateNodeMessage;
 import de.uni_stuttgart.caas.messages.AddToGridMessage;
+import de.uni_stuttgart.caas.messages.CacheNodeUpdateMessage;
 import de.uni_stuttgart.caas.messages.ConfirmationMessage;
 import de.uni_stuttgart.caas.messages.IMessage;
 import de.uni_stuttgart.caas.messages.IMessage.MessageType;
@@ -184,10 +187,11 @@ public class AdminNode /* implements AutoClosable */{
 				break;
 
 			case JOIN:
-				if (!(message instanceof JoinMessage)) {
-					logger.write("Received Message that should be a join message, but it wasn't");
-					System.exit(-1);
-				}
+				// we are already checking the message type
+//				if (!(message instanceof JoinMessage)) {
+//					logger.write("Received Message that should be a join message, but it wasn't");
+//					System.exit(-1);
+//				}
 				JoinMessage m = (JoinMessage) message;
 				nodeId = idSource.getAndIncrement();
 				JoinRequest jr = new JoinRequest(clientAddress, m.ADDRESS_FOR_CACHENODE_NEIGHBORCONNECTOR, m.ADDRESS_FOR_CACHENODE_QUERYLISTENER, nodeId);
@@ -202,7 +206,10 @@ public class AdminNode /* implements AutoClosable */{
 					new Thread(new InitGridHelper()).start();
 				}
 				return response;
-
+			case CACHENODE_UPDATE_MESSAGE:
+				NodeInfo updatedInfo = ((CacheNodeUpdateMessage) message).newInfo;
+				NodeInfo oldInfo = ((CacheNodeUpdateMessage) message).oldInfo;
+				grid.updateLocationOfNode(updatedInfo, oldInfo);
 			default:
 				break;
 			}
