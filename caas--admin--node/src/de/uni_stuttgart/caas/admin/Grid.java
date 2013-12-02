@@ -183,7 +183,7 @@ public class Grid {
 	}
 	
 	/**
-	 * updates location locally, does NOT update triangulation!
+	 * updates location locally
 	 * 
 	 * @param newInfo 
 	 * 				new node information
@@ -193,6 +193,7 @@ public class Grid {
 	public void updateLocationOfNode(NodeInfo newInfo, NodeInfo oldInfo) {
 		connectedNodes.put(newInfo.NODE_ADDRESS, newInfo);
 		pointToAddressMapping.put(newInfo.getLocationOfNode(), pointToAddressMapping.remove(oldInfo.getLocationOfNode()));
+		triangulation.updatePoint(oldInfo.getLocationOfNode(), newInfo.getLocationOfNode());
 	}
 
 	/**

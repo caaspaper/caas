@@ -24,6 +24,7 @@ import javax.swing.JTextArea;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import de.uni_stuttgart.caas.admin.AdminNode;
 import de.uni_stuttgart.caas.base.LogReceiver;
@@ -39,6 +40,8 @@ public class MainWindow {
 	private final String DEFAULT_ADMIN_IP = "127.0.0.1";
 	private final int DEFAULT_CAPACITY = AdminNode.DEFAULT_INITIAL_CAPACITY;
 	public final int DEFAULT_LOG_RECEIVER_PORT = 43215;
+	
+	public static final int REFRESH_TIME_FOR_GRAPH = 100;
 
 	private ImprovedFormattedTextField numNodesField;
 	private ImprovedFormattedTextField adminCapacityField;
@@ -48,6 +51,13 @@ public class MainWindow {
 	private NetworkGraph window;
 	private AdminNode admin;
 	private LogReceiver receiver;
+	
+	
+	
+	/**
+	 * Timer for redrawing the network graph
+	 */
+	private Timer t;
 
 	/**
 	 * Launch the application.
@@ -221,12 +231,25 @@ public class MainWindow {
 				}
 				if (window != null) {
 					window.setVisible(true);
+					t.restart();
 				} else {
 					EventQueue.invokeLater(new Runnable() {
 						public void run() {
 							try {
 								window = new NetworkGraph(admin.getTriangles());
 								window.setVisible(true);
+								t = new Timer(REFRESH_TIME_FOR_GRAPH, new ActionListener() {
+									
+									@Override
+									public void actionPerformed(ActionEvent arg0) {
+										window.addTriangles(admin.getTriangles());
+										window.repaint();
+										if (!window.isVisible()) {
+											t.stop();
+										}
+									}
+								});
+								t.start();
 							} catch (Exception e) {
 								e.printStackTrace();
 							}

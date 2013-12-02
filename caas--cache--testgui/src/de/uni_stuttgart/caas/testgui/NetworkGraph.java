@@ -8,12 +8,15 @@ import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Vector;
+
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
+
 import delaunay_triangulation.Triangle_dt;
 
 public class NetworkGraph extends JFrame {
@@ -28,14 +31,15 @@ public class NetworkGraph extends JFrame {
 	/**
 	 * Triangles representing current triangulation
 	 */
-	private Vector<Triangle_dt> triangles;
+	private Vector<Vector<Triangle_dt>>triangles;	
 
 	/**
 	 * Create the frame.
 	 */
 	public NetworkGraph(Vector<Triangle_dt> triangles) {
 
-		this.triangles = triangles;
+		this.triangles = new Vector<>();
+		this.triangles.add(triangles);
 		final Network n = new Network();
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -48,6 +52,10 @@ public class NetworkGraph extends JFrame {
 		
 		contentPane.add(n, BorderLayout.CENTER);
 		addMenu();
+	}
+	
+	public void addTriangles(Vector<Triangle_dt> triangles) {
+		this.triangles.add(triangles);
 	}
 
 	/**
@@ -75,8 +83,13 @@ public class NetworkGraph extends JFrame {
 		@Override
 		public void paint(Graphics g) {
 			super.paint(g);
-
-			drawer.drawTriangulation(g, triangles);
+			float counter = 1;
+			float step = counter / triangles.size();
+			for (int i = 0; i < triangles.size(); ++i) {
+				g.setColor(new Color(1f, 1f, 1f, counter));
+				drawer.drawTriangulation(g, triangles.get(i));
+				counter -= step;
+			}
 		}
 
 		/**
