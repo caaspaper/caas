@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +33,13 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  * overlay.
  */
 public class CacheNode {
+
+	public enum BehaviourFlags {
+
+		NEIGHBOR_PROPAGATION, SCALEIN, SCALEOUT
+	};
+
+	private final EnumSet<BehaviourFlags> config;
 
 	/**
 	 * Number of connections per second allowed before the node starts
@@ -116,7 +124,8 @@ public class CacheNode {
 	 *            address info of the admin node
 	 * @throws IOException
 	 */
-	public CacheNode(InetSocketAddress addr) throws IOException {
+	public CacheNode(InetSocketAddress addr, EnumSet<BehaviourFlags> _config) throws IOException {
+		config = _config == null ? EnumSet.noneOf(CacheNode.BehaviourFlags.class) : _config;
 		queryProcessTimes = new LinkedBlockingQueue<>();
 		logger = new LogSender(new InetSocketAddress("localhost", DEFAULT_LOG_RECEIVER_PORT));
 
@@ -148,8 +157,8 @@ public class CacheNode {
 	 * @param port
 	 *            the port, the admin is running on
 	 */
-	public CacheNode(String host, int port) throws IOException {
-		this(new InetSocketAddress(host, port));
+	public CacheNode(String host, int port, EnumSet<BehaviourFlags> _config) throws IOException {
+		this(new InetSocketAddress(host, port), _config);
 	}
 
 	/**
@@ -159,7 +168,17 @@ public class CacheNode {
 	 * 
 	 * @throws IOException
 	 */
-	private CacheNode(long _id, LocationOfNode _position, List<NodeInfo> neighbors, LogSender _logger, ServerSocket _serverSocket) throws IOException {
+	private CacheNode(long _id, LocationOfNode _position, List<NodeInfo> neighbors, LogSender _logger, ServerSocket _serverSocket,
+			EnumSet<BehaviourFlags> _config) throws IOException {
+
+		assert _config != null;
+		assert neighbors != null;
+		assert _logger != null;
+		assert _serverSocket != null;
+		assert _position != null;
+
+		config = _config;
+
 		queryProcessTimes = new LinkedBlockingQueue<>();
 		serverSocket = _serverSocket;
 
@@ -635,11 +654,13 @@ public class CacheNode {
 			// greedy routing
 			closestNodeToQuery.getValue().sendMessageAsync(message);
 		} else {
-			if (getLoad() > 1) {
+			if (config.contains(BehaviourFlags.NEIGHBOR_PROPAGATION) && getLoad() > 1) {
 				logger.write("forwarding message as local load is too high");
 				forwardMessageToNeighbor(message);
 
-				attemptScaleIn();
+				if (config.contains(BehaviourFlags.SCALEIN)) {
+					attemptScaleIn();
+				}
 			} else {
 				processQueryLocally(message);
 			}
@@ -831,7 +852,7 @@ public class CacheNode {
 							});
 						}
 					}
-					
+
 					try {
 						if (!cd.await(5, TimeUnit.SECONDS)) {
 							// maybe neighbor failure or timeout - make this
@@ -915,7 +936,7 @@ public class CacheNode {
 
 								neighborConnectors = clone;
 							}
-							
+
 							subdivBlock = false;
 						}
 					};
@@ -1039,7 +1060,7 @@ public class CacheNode {
 
 		// actually spawn the cache node
 		try {
-			new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors);
+			new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors, config);
 		} catch (IOException e) {
 			logger.write("failure spawning cache node");
 			e.printStackTrace();
@@ -1089,23 +1110,5 @@ public class CacheNode {
 			}
 		}
 		return (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
-	}
-
-	/**
-	 * Standalone main() for running a cacheNode from the command line
-	 * 
-	 * @param args
-	 *            the ip address of the admin and the port, the admin is
-	 *            listening on
-	 */
-	public static void main(String[] args) {
-		if (args.length != 2) {
-			throw new IllegalArgumentException("please provide the host and the port of the admin node");
-		}
-		try {
-			new CacheNode(args[0], Integer.parseInt(args[1]));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 }

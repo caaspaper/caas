@@ -152,7 +152,7 @@ public class MainWindow {
 					try {
 						final String[] cache_args = addressOfAdminField.getText().split(":"); 
 						final String port = cache_args.length==2 ? cache_args[1] : adminPortField.getText();
-						new CacheNode(addressOfAdminField.getText(), Integer.parseInt(adminPortField.getText()));
+						new CacheNode(addressOfAdminField.getText(), Integer.parseInt(adminPortField.getText()),null);
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
 						break;
