@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.uni_stuttgart.caas.messages.IMessage;
@@ -162,7 +163,18 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 * @return
 	 */
 	public boolean isErrorState() {
-		return errorState;
+		return errorState.get();
+	}
+
+	/**
+	 * Invoked when an error state is reached. Does not necessarily need to be
+	 * overridden by implementors, but doing so is highly recommended.
+	 * 
+	 * onReachErrorState() is called at most once in the lifetime of a
+	 * FullDuplexMPI instance.
+	 */
+	public void onReachErrorState() {
+		assert isErrorState();
 	}
 
 	@Override
@@ -249,7 +261,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 */
 	public void sendMessageAsync(IMessage message, IResponseHandler futureResponse) {
 		assert message != null;
-		if (errorState) {
+		if (errorState.get()) {
 			if (futureResponse != null) {
 				futureResponse.onConnectionAborted();
 			}
@@ -300,8 +312,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 *         message. Messages with no response are not allowed.
 	 */
 	public abstract IMessage processIncomingMessage(IMessage message);
-	
-	
+
 	public InetAddress getLocalAddress() {
 		return clientSocket.getLocalAddress();
 	}
@@ -369,7 +380,15 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	// the signal to shutdown may not see updates made to this variable by
 	// the thread who triggered the shutdown.
 	private volatile boolean isShuttingDown = false;
-	private volatile boolean errorState = false;
+	private final AtomicBoolean errorState = new AtomicBoolean(false);
+
+	private void enterErrorState() {
+		if (errorState.compareAndSet(false, true)) {
+			onReachErrorState();
+		}
+
+		close();
+	}
 
 	private class ReaderThread implements Runnable {
 
@@ -391,8 +410,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 						envelope = readMessageEnvelope();
 					} catch (IOException e) {
 						// shutdown with error flag set
-						errorState = true;
-						close();
+						enterErrorState();
 						break;
 					}
 
@@ -539,8 +557,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 				e.printStackTrace(outStream);
 
 				// shutdown with error flag set
-				errorState = true;
-				close();
+				enterErrorState();
 			}
 		}
 	}
