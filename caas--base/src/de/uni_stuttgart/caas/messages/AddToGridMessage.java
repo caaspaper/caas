@@ -4,7 +4,6 @@ import java.util.Collection;
 
 import de.uni_stuttgart.caas.base.LocationOfNode;
 import de.uni_stuttgart.caas.base.NodeInfo;
-import delaunay.Point;
 
 /**
  * Message sent to cache node containing information about neighboring nodes
