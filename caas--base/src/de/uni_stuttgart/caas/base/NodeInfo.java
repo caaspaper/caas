@@ -96,7 +96,8 @@ public class NodeInfo implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return NODE_ADDRESS.hashCode();
+		assert ADDRESS_FOR_CACHENODE_NODECONNECTOR != null;
+		return ADDRESS_FOR_CACHENODE_NODECONNECTOR.hashCode();
 
 	}
 
