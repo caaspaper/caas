@@ -55,11 +55,10 @@ public class AdminNode /* implements AutoClosable */{
 	 */
 	private Grid grid = null;
 
-	private CountDownLatch activationCountDown;
+	private CountDownLatch activationCountDown, initFinishedCountDown;
 	private final Thread acceptingThread;
 	private ServerSocket serverSocket;
-	
-	
+
 	private LogSender logger;
 
 	/**
@@ -93,8 +92,7 @@ public class AdminNode /* implements AutoClosable */{
 	 */
 	public AdminNode(int portNumber, int initialCapacity) throws IOException {
 		state = AdminNodeState.INITIAL_SIGNUP_PHASE;
-		
-		
+
 		logger = new LogSender(new InetSocketAddress("localhost", 43215));
 
 		if (portNumber < 1024 || portNumber > 65536) {
@@ -111,6 +109,7 @@ public class AdminNode /* implements AutoClosable */{
 
 		joinRequests = new JoinRequestManager(initialCapacity);
 		activationCountDown = new CountDownLatch(initialCapacity);
+		initFinishedCountDown = new CountDownLatch(initialCapacity);
 
 		try {
 			serverSocket = new ServerSocket(PORT_NUMBER);
@@ -149,8 +148,35 @@ public class AdminNode /* implements AutoClosable */{
 		});
 
 		acceptingThread.start();
+
+		// fire off a thread to call the onInitComplete() method once we are
+		// ready
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					initFinishedCountDown.await();
+				} catch (InterruptedException e) {
+					logger.write("interrupted while waiting for nodes to be activated");
+					e.printStackTrace();
+				}
+
+				onInitComplete();
+			}
+
+		}).start();
 	}
-	
+
+	/**
+	 * Invoked once after all cache nodes have signaled that they have completed
+	 * their activation sequence. This marks the points where query processing
+	 * can start.
+	 */
+	protected void onInitComplete() {
+
+	}
+
 	private static AtomicInteger idSource = new AtomicInteger();
 
 	/**
@@ -173,7 +199,7 @@ public class AdminNode /* implements AutoClosable */{
 
 			assert cS.getRemoteSocketAddress() instanceof InetSocketAddress;
 			this.clientAddress = (InetSocketAddress) cS.getRemoteSocketAddress();
-			
+
 			start();
 		}
 
@@ -195,8 +221,6 @@ public class AdminNode /* implements AutoClosable */{
 				final ConfirmationMessage response = respondToJoinRequest(jr);
 
 				if (response.STATUS_CODE == 0) {
-					
-					
 					// fire off grid construction in a separate thread to have
 					// the message pump stay responsive.
 					new Thread(new InitGridHelper()).start();
@@ -233,7 +257,7 @@ public class AdminNode /* implements AutoClosable */{
 				assert state == AdminNodeState.GRID_RUNNING;
 				assert grid != null;
 				assert nodeId != -1;
-				
+
 				// now send back messages to cache nodes
 				sendMessageAsync(addNodeToGrid(clientAddress, nodeId), new IResponseHandler() {
 
@@ -258,7 +282,20 @@ public class AdminNode /* implements AutoClosable */{
 					e.printStackTrace();
 				}
 
-				sendMessageAsync(activateNode());
+				sendMessageAsync(activateNode(), new IResponseHandler() {
+					@Override
+					public void onResponseReceived(IMessage response) {
+
+						assert response.getMessageType() == MessageType.CONFIRM;
+						initFinishedCountDown.countDown();
+					}
+
+					@Override
+					public void onConnectionAborted() {
+						logger.write("admin: connection to cache node was aborted while waiting for activation to complete");
+						// TODO: this is currently a dangling state
+					}
+				});
 			}
 		}
 	}
@@ -316,8 +353,8 @@ public class AdminNode /* implements AutoClosable */{
 	 * @param addressOfNode
 	 *            Contains IP + port of the cache node that is to be added to
 	 *            grid
-	 * @param id 
-	 * 			  Unique grid of the node
+	 * @param id
+	 *            Unique grid of the node
 	 * @return An AddToGridMessage containing information about nodes
 	 *         neighboring the cache node
 	 * 
@@ -342,12 +379,11 @@ public class AdminNode /* implements AutoClosable */{
 		return new ActivateNodeMessage();
 	}
 
-	
 	public Vector<Triangle_dt> getTriangles() {
 		return grid.getTriangles();
 	}
-	
-	/*	 
+
+	/*
 	 * Shutdown the admin node, aborting all open connections to nodes
 	 */
 	public void close() {
@@ -356,36 +392,35 @@ public class AdminNode /* implements AutoClosable */{
 			serverSocket.close();
 		} catch (IOException e) {
 			// ignore
-		} 
+		}
 		try {
 			acceptingThread.join();
 		} catch (InterruptedException e) {
 			// ignore
 		}
 	}
-	
-	
+
 	public void generateQueriesUniformlyDistributed(final int numOfQueriesPerNode) {
-		
+
 		Thread t = new Thread(new Runnable() {
-		
+
 			@Override
 			public void run() {
 				QuerySender.generateDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger, true);
 			}
-		});	
+		});
 		t.start();
 	}
-	
+
 	public void generateQueriesUniformlyDistributedHotspot(final int numOfQueriesPerNode) {
-		
+
 		Thread t = new Thread(new Runnable() {
-		
+
 			@Override
 			public void run() {
 				QuerySender.generateDistributedQueries(numOfQueriesPerNode, grid.getConnectedNodes(), logger, false);
 			}
-		});	
+		});
 		t.start();
 	}
 }
