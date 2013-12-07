@@ -81,7 +81,7 @@ public class AdminNode /* implements AutoClosable */{
 	}
 
 	/**
-	 * Creates Administrative Node
+	 * Creates administrative Node
 	 * 
 	 * This creates a new thread to handle incoming node connections. To
 	 * shutdown this thread and release all resources associated with the admin
