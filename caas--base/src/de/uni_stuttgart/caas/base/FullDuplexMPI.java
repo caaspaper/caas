@@ -173,7 +173,7 @@ public abstract class FullDuplexMPI /* implements AutoCloseable */{
 	 * onReachErrorState() is called at most once in the lifetime of a
 	 * FullDuplexMPI instance.
 	 */
-	public void onReachErrorState() {
+	protected void onReachErrorState() {
 		assert isErrorState();
 	}
 
