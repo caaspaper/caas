@@ -224,8 +224,14 @@ public class CacheNode {
 		logger.write("cache node: shutting down");
 		currentState = CacheNodeState.DEAD;
 		connectionToAdmin.close();
-		// free up the reference
 		connectionToAdmin = null;
+		
+		synchronized(regenerateNeighborConnectorsMonitor) {
+			for(NeighborConnector con : neighborConnectors.values()) {
+				con.close();
+			}
+			neighborConnectors = null;
+		}
 	}
 
 	/**
@@ -534,6 +540,13 @@ public class CacheNode {
 					logger.write("cache node: connection to admin was closed");
 				}
 			});
+		}
+
+		@Override
+		protected void onReachErrorState() {
+			super.onReachErrorState();
+
+			close();
 		}
 
 		@Override
