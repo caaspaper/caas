@@ -20,14 +20,14 @@ public class Startup {
 			throw new IllegalArgumentException("please provide the host and the port of admin node");
 		}
 
-		EnumSet<CacheNode.BehaviourFlags> config = EnumSet.noneOf(CacheNode.BehaviourFlags.class);
+		EnumSet<CacheBehaviourFlags> config = EnumSet.noneOf(CacheBehaviourFlags.class);
 		for (String s : args) {
 			if (s.equals("-scalein")) {
-				config.add(CacheNode.BehaviourFlags.SCALEIN);
+				config.add(CacheBehaviourFlags.SCALEIN);
 			} else if (s.equals("-scaleout")) {
-				config.add(CacheNode.BehaviourFlags.SCALEOUT);
+				config.add(CacheBehaviourFlags.SCALEOUT);
 			} else if (s.equals("-propagation")) {
-				config.add(CacheNode.BehaviourFlags.NEIGHBOR_PROPAGATION);
+				config.add(CacheBehaviourFlags.NEIGHBOR_PROPAGATION);
 			}
 		}
 		try {

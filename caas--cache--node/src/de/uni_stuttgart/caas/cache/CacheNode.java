@@ -34,12 +34,7 @@ import de.uni_stuttgart.caas.messages.IMessage.MessageType;
  */
 public class CacheNode {
 
-	public enum BehaviourFlags {
-
-		NEIGHBOR_PROPAGATION, SCALEIN, SCALEOUT
-	};
-
-	private final EnumSet<BehaviourFlags> config;
+	private final EnumSet<CacheBehaviourFlags> config;
 
 	/**
 	 * Number of connections per second allowed before the node starts
@@ -124,8 +119,8 @@ public class CacheNode {
 	 *            address info of the admin node
 	 * @throws IOException
 	 */
-	public CacheNode(InetSocketAddress addr, EnumSet<BehaviourFlags> _config) throws IOException {
-		config = _config == null ? EnumSet.noneOf(CacheNode.BehaviourFlags.class) : _config;
+	public CacheNode(InetSocketAddress addr, EnumSet<CacheBehaviourFlags> _config) throws IOException {
+		config = _config == null ? EnumSet.noneOf(CacheBehaviourFlags.class) : _config;
 		queryProcessTimes = new LinkedBlockingQueue<>();
 		logger = new LogSender(new InetSocketAddress("localhost", DEFAULT_LOG_RECEIVER_PORT));
 
@@ -157,7 +152,7 @@ public class CacheNode {
 	 * @param port
 	 *            the port, the admin is running on
 	 */
-	public CacheNode(String host, int port, EnumSet<BehaviourFlags> _config) throws IOException {
+	public CacheNode(String host, int port, EnumSet<CacheBehaviourFlags> _config) throws IOException {
 		this(new InetSocketAddress(host, port), _config);
 	}
 
@@ -169,7 +164,7 @@ public class CacheNode {
 	 * @throws IOException
 	 */
 	private CacheNode(long _id, LocationOfNode _position, List<NodeInfo> neighbors, LogSender _logger, ServerSocket _serverSocket,
-			EnumSet<BehaviourFlags> _config) throws IOException {
+			EnumSet<CacheBehaviourFlags> _config) throws IOException {
 
 		assert _config != null;
 		assert neighbors != null;
@@ -654,11 +649,11 @@ public class CacheNode {
 			// greedy routing
 			closestNodeToQuery.getValue().sendMessageAsync(message);
 		} else {
-			if (config.contains(BehaviourFlags.NEIGHBOR_PROPAGATION) && getLoad() > 1) {
+			if (config.contains(CacheBehaviourFlags.NEIGHBOR_PROPAGATION) && getLoad() > 1) {
 				logger.write("forwarding message as local load is too high");
 				forwardMessageToNeighbor(message);
 
-				if (config.contains(BehaviourFlags.SCALEIN)) {
+				if (config.contains(CacheBehaviourFlags.SCALEIN)) {
 					attemptScaleIn();
 				}
 			} else {
