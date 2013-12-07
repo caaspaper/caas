@@ -80,10 +80,13 @@ public class CacheNode {
 
 	/**
 	 * List of neighboring nodes, keyed by their address info Note that, while
-	 * the hashmap itself is not accessed concurrently, the reference is
-	 * concurrently written to.
+	 * the hashmap itself is not accessed concurrently, the _reference_ is
+	 * concurrently written to. To update the HM safely, hold
+	 * regenerateNeighborConnectorsMonitor, make a clone() of the list, make
+	 * your modifications and write them back.
 	 */
 	private volatile HashMap<NodeInfo, NeighborConnector> neighborConnectors;
+	private final Object regenerateNeighborConnectorsMonitor = new Object();
 
 	/**
 	 * Current state - volatile because it is read and written to concurrently
@@ -111,6 +114,8 @@ public class CacheNode {
 	 */
 	private QueryListener queryListener;
 	private final Object activationMonitor = new Object();
+
+	private final ScaleInController scaleIn = new ScaleInController();
 
 	/**
 	 * Construct a new cache node given the address of the admin node
@@ -190,7 +195,8 @@ public class CacheNode {
 		// TODO: copypaste from admin connector - make this nicer
 		synchronized (activationMonitor) {
 			currentState = CacheNodeState.ACTIVE;
-			subdivBlock = false;
+
+			scaleIn.preventScaleIn(false);
 			activationMonitor.notifyAll();
 		}
 	}
@@ -471,12 +477,12 @@ public class CacheNode {
 					}
 				}
 			} else if (kind == MessageType.SUBDIV_REQUEST) {
-				onReceiveSubdivisionRequest((SubdivisionRequestMessage) message, nid);
+				scaleIn.onReceiveSubdivisionRequest((SubdivisionRequestMessage) message, nid);
 				return new ConfirmationMessage(1, "subdiv request processed");
 			} else if (kind == MessageType.SUBDIV_COMMIT) {
-				return onReceiveSubdivisionCommit((SubdivisionCommitMessage) message, nid);
+				return scaleIn.onReceiveSubdivisionCommit((SubdivisionCommitMessage) message, nid);
 			} else if (kind == MessageType.SUBDIV_CONFIRM) {
-				return onReceiveSubdivisionConfirm((SubdivisionConfirmMessage) message, nid);
+				return scaleIn.onReceiveSubdivisionConfirm((SubdivisionConfirmMessage) message, nid);
 			} else {
 				logger.write("cache node: unexpected neighbor message, reveived message was: " + message.getMessageType());
 			}
@@ -575,7 +581,7 @@ public class CacheNode {
 				if (response.STATUS_CODE == 0) {
 					synchronized (activationMonitor) {
 						currentState = CacheNodeState.ACTIVE;
-						subdivBlock = false;
+						scaleIn.preventScaleIn(false);
 						activationMonitor.notifyAll();
 					}
 				} else {
@@ -592,6 +598,24 @@ public class CacheNode {
 			}
 			return new ConfirmationMessage(-1, "message type unexpected: " + type.toString());
 		}
+	}
+
+	/**
+	 * Calculates the approximate current load of the cache node A higher value
+	 * means a higher load.
+	 * 
+	 * @return a double representing the load
+	 */
+	public double getLoad() {
+		final long currentTime = System.currentTimeMillis();
+		while (!queryProcessTimes.isEmpty()) {
+			if (currentTime - queryProcessTimes.peek() > 1000) {
+				queryProcessTimes.poll();
+			} else {
+				break;
+			}
+		}
+		return (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
 	}
 
 	/**
@@ -654,7 +678,7 @@ public class CacheNode {
 				forwardMessageToNeighbor(message);
 
 				if (config.contains(CacheBehaviourFlags.SCALEIN)) {
-					attemptScaleIn();
+					scaleIn.attemptScaleIn();
 				}
 			} else {
 				processQueryLocally(message);
@@ -736,329 +760,346 @@ public class CacheNode {
 		}).start();
 	}
 
-	/**
-	 * Called when the measured load of the cache node exceeds the threshold.
-	 * Attempts to find a suitable triangle adjacent to the node that can be
-	 * further subdivided by adding another node. This is inherently
-	 * asynchronous.
-	 */
-	private void attemptScaleIn() {
+	/** Handles the Scale-In method of Load Balancing. */
+	private class ScaleInController {
 
-		// do not subdivide or help subdividing if we're already working on it.
-		if (subdivBlock) {
-			return;
+		/**
+		 * Sets whether scale-in is currently blocked or not. This not only
+		 * refers to this node initiating scale-in but also to this node helping
+		 * other nodes to establish scale-in in any incident triangle.
+		 */
+		public void preventScaleIn(boolean prevent) {
+			subdivBlock = prevent;
 		}
-		// Send out subdivision requests to all neighbors with higher id
 
-		// ignore the response, if any - responses get back to use in a triangle
-		// route from a different node so we cannot receive them through the
-		// usual mechanism.
-		for (NeighborConnector n : neighborConnectors.values()) {
-			if (n.nid > id) {
-				n.sendMessageAsync(new SubdivisionRequestMessage(id, n.nid));
+		/**
+		 * Called when the measured load of the cache node exceeds the
+		 * threshold. Attempts to find a suitable triangle adjacent to the node
+		 * that can be further subdivided by adding another node. This is
+		 * inherently asynchronous.
+		 */
+		public void attemptScaleIn() {
+
+			// do not subdivide or help subdividing if we're already working on
+			// performing a subdivision operation
+			if (subdivBlock) {
+				return;
 			}
-		}
-	}
+			// Send out subdivision requests to all neighbors with higher id
 
-	private volatile boolean subdivBlock = true;
-	private volatile boolean subdivCancel = false;
-	private volatile long subdivOriginator = -1;
-	private final Object regenerateNeighborConnectorsMonitor = new Object();
-
-	/**
-	 * Called in response to us receiving a subdivision request message from
-	 * another node. The action taken is different depending on which vertex in
-	 * the triangle we are.
-	 */
-	private void onReceiveSubdivisionRequest(final SubdivisionRequestMessage message, final long sourceId) {
-		assert message != null;
-
-		// do not subdivide or help subdividing if we're already working on it.
-		if (subdivBlock) {
-			return;
-		}
-
-		message.AddTriangleVertexLoad(getLoad());
-
-		// first vertex - forward to all neighbors with higher id
-		if (message.ttl == 2) {
-			assert message.FIRST_VERTEX == id;
-			assert id > message.ORIGIN_VERTEX;
-
+			// ignore the response, if any - responses get back to use in a
+			// triangle route from a different node so we cannot receive them
+			// through the usual mechanism.
 			for (NeighborConnector n : neighborConnectors.values()) {
-				if (n.nid > message.ORIGIN_VERTEX) {
-					n.sendMessageAsync(message);
+				if (n.nid > id) {
+					n.sendMessageAsync(new SubdivisionRequestMessage(id, n.nid));
 				}
 			}
-			return;
 		}
-		// second vertex - only forward to originating vertex, drop otherwise
-		if (message.ttl == 1) {
-			for (NeighborConnector n : neighborConnectors.values()) {
-				if (n.nid == message.ORIGIN_VERTEX) {
-					n.sendMessageAsync(message);
-				}
+
+		private volatile boolean subdivBlock = true;
+		private volatile boolean subdivCancel = false;
+		private volatile long subdivOriginator = -1;
+
+		/**
+		 * Called in response to us receiving a subdivision request message from
+		 * another node. The action taken is different depending on which vertex
+		 * in the triangle we are.
+		 */
+		private void onReceiveSubdivisionRequest(final SubdivisionRequestMessage message, final long sourceId) {
+			assert message != null;
+
+			// do not subdivide or help subdividing if we're already working on
+			// it.
+			if (subdivBlock) {
+				return;
 			}
-			return;
-		}
-		// back to original vertex
-		assert message.ttl == 0;
-		assert message.ORIGIN_VERTEX == id;
 
-		assert sourceId != id && sourceId != message.FIRST_VERTEX;
+			message.AddTriangleVertexLoad(getLoad());
 
-		if (message.accumLoad > SUBDIVISION_LOAD_THRESHOLD) {
+			// first vertex - forward to all neighbors with higher id
+			if (message.ttl == 2) {
+				assert message.FIRST_VERTEX == id;
+				assert id > message.ORIGIN_VERTEX;
 
-			// attempt to scale out by adding a new node into the triangle we
-			// selected. First we need to have all the nodes in the triangle
-			// confirm this, though.
-			subdivBlock = true;
-
-			// run this in a separate thread to avoid deadlock if the calling
-			// thread is a neighbor message pump.
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-
-					final CountDownLatch cd = new CountDownLatch(2);
-					subdivCancel = false;
-
-					final SubdivisionConfirmMessage triangle = new SubdivisionConfirmMessage(id, message.FIRST_VERTEX, sourceId);
-					subdivOriginator = id;
-
-					for (NeighborConnector n : neighborConnectors.values()) {
-						if (n.nid == message.FIRST_VERTEX || n.nid == sourceId) {
-							n.sendMessageAsync(triangle, new IResponseHandler() {
-
-								@Override
-								public void onResponseReceived(IMessage response) {
-									assert response instanceof ConfirmationMessage;
-									if (((ConfirmationMessage) response).STATUS_CODE < 0) {
-										subdivCancel = true;
-									}
-
-									cd.countDown();
-								}
-
-								@Override
-								public void onConnectionAborted() {
-									// TODO
-								}
-							});
-						}
+				for (NeighborConnector n : neighborConnectors.values()) {
+					if (n.nid > message.ORIGIN_VERTEX) {
+						n.sendMessageAsync(message);
 					}
-
-					try {
-						if (!cd.await(5, TimeUnit.SECONDS)) {
-							// maybe neighbor failure or timeout - make this
-							// node available for subdivision again to avoid a
-							// permanent stall
-							subdivBlock = false;
-							return;
-						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-						assert false;
-					}
-
-					if (subdivCancel) {
-						System.out.println("cancel op");
-						// at least one node disagreed, therefore, cancel the
-						// operation
-						return;
-					}
-
-					// both neighbors agree to subdivide, so proceed.
-					spawnSubdivisionCacheNode(triangle);
-					subdivBlock = false;
-				}
-			}).start();
-		}
-	}
-
-	/**
-	 * Called in response to us receiving a subdivision confirmation message
-	 * from another node.
-	 */
-	private ConfirmationMessage onReceiveSubdivisionConfirm(final SubdivisionConfirmMessage message, final long sourceId) {
-		if (subdivBlock) {
-			return new ConfirmationMessage(-1, "blocked, cannot subdivide here");
-		}
-
-		subdivOriginator = sourceId;
-		subdivBlock = true;
-		return new ConfirmationMessage(0, "");
-	}
-
-	/**
-	 * Called in response to us receiving a subdivision commit message from
-	 * another node.
-	 */
-	private ConfirmationMessage onReceiveSubdivisionCommit(final SubdivisionCommitMessage message, final long sourceId) {
-		// TODO: real error handling - this only never happens if we trust
-		// neighbors
-		assert sourceId == subdivOriginator;
-
-		// accept one incoming neighbor connection coming from the newly added
-		// node.
-
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Socket sock = serverSocket.accept();
-					new NeighborConnector(sock) {
-						@SuppressWarnings("unchecked")
-						@Override
-						protected void onReceiveId(PublishIdMessage pid) {
-							super.onReceiveId(pid);
-							final long nid = GetNeighborId();
-
-							// TODO: review this assumption
-							assert nid == message.NEW_NODE_ID;
-							assert message.NEW_NODE_INFO != null;
-
-							// operate on a copy of the neighbor list. The
-							// monitor is used to ensure we don't loose updates
-							// if two threads try to modify the HM at the same
-							// time. Note that working on a copy is required as
-							// access to the `neighborConnectors` itself is not
-							// synchronized.
-							synchronized (regenerateNeighborConnectorsMonitor) {
-
-								HashMap<NodeInfo, NeighborConnector> clone = (HashMap<NodeInfo, NeighborConnector>) neighborConnectors.clone();
-								clone.put(message.NEW_NODE_INFO, this);
-
-								neighborConnectors = clone;
-							}
-
-							subdivBlock = false;
-						}
-					};
-				} catch (IOException e) {
-					e.printStackTrace();
-					final String msg = "failed to accept incoming neighbor connection for subdivided node";
-					logger.write("cache node: " + msg);
-				}
-			}
-		}).start();
-
-		return new ConfirmationMessage(0, "");
-	}
-
-	/**
-	 * Spawns a subdivision cache node in the given triangle. This assumes all
-	 * vertices have confirmed.
-	 */
-	void spawnSubdivisionCacheNode(SubdivisionConfirmMessage triangle) {
-		assert subdivBlock;
-
-		// TODO: make sure we generate a truly unique id - for a random long the
-		// risk of a collision is really small, but nevertheless nonzero.
-		final long newId = (new Random()).nextLong();
-
-		final CountDownLatch cd = new CountDownLatch(2);
-
-		String localHost;
-		try {
-			localHost = Inet4Address.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e1) {
-			e1.printStackTrace();
-			return;
-		}
-
-		ServerSocket sockFutureNeighbors;
-		try {
-			sockFutureNeighbors = new ServerSocket(0);
-		} catch (IOException e2) {
-			e2.printStackTrace();
-			logger.write("failed to allocate ServerSocket for new cache node");
-			return;
-		}
-
-		final InetSocketAddress adr = new InetSocketAddress(localHost, sockFutureNeighbors.getLocalPort());
-
-		// TODO: how does the admin get to connect with our newly added node?
-		// Also, if starting new nodes involves physically adding/removing nodes
-		// from the Cloud, we need the admin to do that for us. Starting them
-		// locally is just a workaround for now and takes advantage of the fact
-		// that our fake query processing introduces a sleep time during which
-		// multiple cache nodes running the same physical node can interleave.
-		final NodeInfo nodeInfo = new NodeInfo(connectionToAdmin.ADDRESS, adr, null, newId);
-
-		// the position of the new node is the average of the surrounding
-		// triangle vertices
-		int xpos = 0, ypos = 0;
-		for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
-			final NeighborConnector n = kv.getValue();
-			if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
-				final LocationOfNode loc = kv.getKey().getLocationOfNode();
-				xpos += loc.x;
-				ypos += loc.y;
-			}
-		}
-		final LocationOfNode locationOfNode = new LocationOfNode(xpos / 3, ypos / 3);
-		nodeInfo.updateLocation(locationOfNode);
-
-		final SubdivisionCommitMessage message = new SubdivisionCommitMessage(newId, nodeInfo);
-
-		final List<NodeInfo> neighbors = new ArrayList<NodeInfo>();
-
-		// notify all triangle vertices - including ourselves! - to expect
-		// another neighbor connection. This safe as we are not running on a
-		// message pump thread.
-		for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
-			final NeighborConnector n = kv.getValue();
-			if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
-				neighbors.add(kv.getKey());
-				final LocationOfNode loc = kv.getKey().getLocationOfNode();
-				xpos += loc.x;
-				ypos += loc.y;
-
-				if (n.nid == triangle.V0) {
-					onReceiveSubdivisionCommit(message, id);
-				} else {
-					n.sendMessageAsync(message, new IResponseHandler() {
-
-						@Override
-						public void onResponseReceived(IMessage response) {
-							assert response instanceof ConfirmationMessage;
-							cd.countDown();
-						}
-
-						@Override
-						public void onConnectionAborted() {
-							// TODO
-						}
-					});
-				}
-			}
-		}
-
-		try {
-			if (!cd.await(5, TimeUnit.SECONDS)) {
-				System.out.println("timeout during scale-in");
-				try {
-					sockFutureNeighbors.close();
-				} catch (IOException e) {
-					e.printStackTrace();
 				}
 				return;
 			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			assert false;
+			// second vertex - only forward to originating vertex, drop
+			// otherwise
+			if (message.ttl == 1) {
+				for (NeighborConnector n : neighborConnectors.values()) {
+					if (n.nid == message.ORIGIN_VERTEX) {
+						n.sendMessageAsync(message);
+					}
+				}
+				return;
+			}
+			// back to original vertex
+			assert message.ttl == 0;
+			assert message.ORIGIN_VERTEX == id;
+
+			assert sourceId != id && sourceId != message.FIRST_VERTEX;
+
+			if (message.accumLoad > SUBDIVISION_LOAD_THRESHOLD) {
+
+				// attempt to scale out by adding a new node into the triangle
+				// we selected. First we need to have all the nodes in the
+				// triangle confirm this, though.
+				subdivBlock = true;
+
+				// run this in a separate thread to avoid deadlock if the
+				// calling thread is a neighbor message pump.
+				new Thread(new Runnable() {
+					@Override
+					public void run() {
+
+						final CountDownLatch cd = new CountDownLatch(2);
+						subdivCancel = false;
+
+						final SubdivisionConfirmMessage triangle = new SubdivisionConfirmMessage(id, message.FIRST_VERTEX, sourceId);
+						subdivOriginator = id;
+
+						for (NeighborConnector n : neighborConnectors.values()) {
+							if (n.nid == message.FIRST_VERTEX || n.nid == sourceId) {
+								n.sendMessageAsync(triangle, new IResponseHandler() {
+
+									@Override
+									public void onResponseReceived(IMessage response) {
+										assert response instanceof ConfirmationMessage;
+										if (((ConfirmationMessage) response).STATUS_CODE < 0) {
+											subdivCancel = true;
+										}
+
+										cd.countDown();
+									}
+
+									@Override
+									public void onConnectionAborted() {
+										// TODO
+									}
+								});
+							}
+						}
+
+						try {
+							if (!cd.await(5, TimeUnit.SECONDS)) {
+								// maybe neighbor failure or timeout - make this
+								// node available for subdivision again to avoid
+								// a permanent stall
+								subdivBlock = false;
+								return;
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+							assert false;
+						}
+
+						if (subdivCancel) {
+							System.out.println("cancel op");
+							// at least one node disagreed, therefore, cancel
+							// the operation
+							return;
+						}
+
+						// both neighbors agree to subdivide, so proceed.
+						spawnSubdivisionCacheNode(triangle);
+						subdivBlock = false;
+					}
+				}).start();
+			}
 		}
 
-		// (hack) ensure it is always visible in the GUI
-		System.out.println("scale-in: adding intermediate cache node");
+		/**
+		 * Called in response to us receiving a subdivision confirmation message
+		 * from another node.
+		 */
+		private ConfirmationMessage onReceiveSubdivisionConfirm(final SubdivisionConfirmMessage message, final long sourceId) {
+			if (subdivBlock) {
+				return new ConfirmationMessage(-1, "blocked, cannot subdivide here");
+			}
 
-		// actually spawn the cache node
-		try {
-			new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors, config);
-		} catch (IOException e) {
-			logger.write("failure spawning cache node");
-			e.printStackTrace();
+			subdivOriginator = sourceId;
+			subdivBlock = true;
+			return new ConfirmationMessage(0, "");
+		}
+
+		/**
+		 * Called in response to us receiving a subdivision commit message from
+		 * another node.
+		 */
+		private ConfirmationMessage onReceiveSubdivisionCommit(final SubdivisionCommitMessage message, final long sourceId) {
+			// TODO: real error handling - this only never happens if we trust
+			// neighbors
+			assert sourceId == subdivOriginator;
+
+			// accept one incoming neighbor connection coming from the newly
+			// added node.
+
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						Socket sock = serverSocket.accept();
+						new NeighborConnector(sock) {
+							@SuppressWarnings("unchecked")
+							@Override
+							protected void onReceiveId(PublishIdMessage pid) {
+								super.onReceiveId(pid);
+								final long nid = GetNeighborId();
+
+								// TODO: review this assumption
+								assert nid == message.NEW_NODE_ID;
+								assert message.NEW_NODE_INFO != null;
+
+								// operate on a copy of the neighbor list. The
+								// monitor is used to ensure we don't loose
+								// updates if two threads try to modify the HM
+								// at the same time. Note that working on a copy
+								// is required as access to the
+								// `neighborConnectors` itself is not
+								// synchronized.
+								synchronized (regenerateNeighborConnectorsMonitor) {
+
+									HashMap<NodeInfo, NeighborConnector> clone = (HashMap<NodeInfo, NeighborConnector>) neighborConnectors.clone();
+									clone.put(message.NEW_NODE_INFO, this);
+
+									neighborConnectors = clone;
+								}
+
+								subdivBlock = false;
+							}
+						};
+					} catch (IOException e) {
+						e.printStackTrace();
+						final String msg = "failed to accept incoming neighbor connection for subdivided node";
+						logger.write("cache node: " + msg);
+					}
+				}
+			}).start();
+
+			return new ConfirmationMessage(0, "");
+		}
+
+		/**
+		 * Spawns a subdivision cache node in the given triangle. This assumes
+		 * all vertices have confirmed.
+		 */
+		void spawnSubdivisionCacheNode(SubdivisionConfirmMessage triangle) {
+			assert subdivBlock;
+
+			// TODO: make sure we generate a truly unique id - for a random long
+			// the risk of a collision is really small, but nevertheless
+			// nonzero.
+			final long newId = (new Random()).nextLong();
+
+			final CountDownLatch cd = new CountDownLatch(2);
+
+			String localHost;
+			try {
+				localHost = Inet4Address.getLocalHost().getHostAddress();
+			} catch (UnknownHostException e1) {
+				e1.printStackTrace();
+				return;
+			}
+
+			ServerSocket sockFutureNeighbors;
+			try {
+				sockFutureNeighbors = new ServerSocket(0);
+			} catch (IOException e2) {
+				e2.printStackTrace();
+				logger.write("failed to allocate ServerSocket for new cache node");
+				return;
+			}
+
+			final InetSocketAddress adr = new InetSocketAddress(localHost, sockFutureNeighbors.getLocalPort());
+
+			// TODO: how does the admin get to connect with our newly added
+			// node? Also, if starting new nodes involves physically
+			// adding/removing nodes from the Cloud, we need the admin to do
+			// that for us. Starting them locally is just a workaround for now
+			// and takes advantage of the fact that our fake query processing
+			// introduces a sleep time during which multiple cache nodes running
+			// the same physical node can interleave.
+			final NodeInfo nodeInfo = new NodeInfo(connectionToAdmin.ADDRESS, adr, null, newId);
+
+			// the position of the new node is the average of the surrounding
+			// triangle vertices
+			int xpos = 0, ypos = 0;
+			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
+				final NeighborConnector n = kv.getValue();
+				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
+					final LocationOfNode loc = kv.getKey().getLocationOfNode();
+					xpos += loc.x;
+					ypos += loc.y;
+				}
+			}
+			final LocationOfNode locationOfNode = new LocationOfNode(xpos / 3, ypos / 3);
+			nodeInfo.updateLocation(locationOfNode);
+
+			final SubdivisionCommitMessage message = new SubdivisionCommitMessage(newId, nodeInfo);
+			final List<NodeInfo> neighbors = new ArrayList<NodeInfo>();
+
+			// notify all triangle vertices - including ourselves! - to expect
+			// another neighbor connection. This safe as we are not running on a
+			// message pump thread.
+			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
+				final NeighborConnector n = kv.getValue();
+				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
+					neighbors.add(kv.getKey());
+					final LocationOfNode loc = kv.getKey().getLocationOfNode();
+					xpos += loc.x;
+					ypos += loc.y;
+
+					if (n.nid == triangle.V0) {
+						onReceiveSubdivisionCommit(message, id);
+					} else {
+						n.sendMessageAsync(message, new IResponseHandler() {
+
+							@Override
+							public void onResponseReceived(IMessage response) {
+								assert response instanceof ConfirmationMessage;
+								cd.countDown();
+							}
+
+							@Override
+							public void onConnectionAborted() {
+								// TODO
+							}
+						});
+					}
+				}
+			}
+
+			try {
+				if (!cd.await(5, TimeUnit.SECONDS)) {
+					System.out.println("timeout during scale-in");
+					try {
+						sockFutureNeighbors.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					return;
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				assert false;
+			}
+
+			// (hack) ensure it is always visible in the GUI
+			System.out.println("scale-in: adding intermediate cache node");
+
+			// actually spawn the cache node
+			try {
+				new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors, config);
+			} catch (IOException e) {
+				logger.write("failure spawning cache node");
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -1087,23 +1128,5 @@ public class CacheNode {
 	 */
 	private static final double calculateDistance(LocationOfNode a, LocationOfNode b) {
 		return Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
-	}
-
-	/**
-	 * Calculates the approximate current load of the cache node A higher value
-	 * means a higher load.
-	 * 
-	 * @return a double representing the load
-	 */
-	public double getLoad() {
-		final long currentTime = System.currentTimeMillis();
-		while (!queryProcessTimes.isEmpty()) {
-			if (currentTime - queryProcessTimes.peek() > 1000) {
-				queryProcessTimes.poll();
-			} else {
-				break;
-			}
-		}
-		return (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
 	}
 }
