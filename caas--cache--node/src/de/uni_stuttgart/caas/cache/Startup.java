@@ -2,21 +2,39 @@ package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.EnumSet;
 
 
 
 public class Startup {
 
 	/**
+	 * Standalone main() for running a cacheNode from the command line
+	 * 
 	 * @param args
+	 *            the ip address of the admin and the port, the admin is
+	 *            listening on
 	 */
 	public static void main(String[] args) {
+		if (args.length < 2) {
+			throw new IllegalArgumentException("please provide the host and the port of admin node");
+		}
+
+		EnumSet<CacheNode.BehaviourFlags> config = EnumSet.noneOf(CacheNode.BehaviourFlags.class);
+		for (String s : args) {
+			if (s.equals("-scalein")) {
+				config.add(CacheNode.BehaviourFlags.SCALEIN);
+			} else if (s.equals("-scaleout")) {
+				config.add(CacheNode.BehaviourFlags.SCALEOUT);
+			} else if (s.equals("-propagation")) {
+				config.add(CacheNode.BehaviourFlags.NEIGHBOR_PROPAGATION);
+			}
+		}
 		try {
-			CacheNode n = new CacheNode(new InetSocketAddress("localhost", 5007));
+			new CacheNode(args[0], Integer.parseInt(args[1]), config);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-
 }
+
