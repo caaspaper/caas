@@ -989,34 +989,26 @@ public class CacheNode {
 		 * Spawns a subdivision cache node in the given triangle. This assumes
 		 * all vertices have confirmed.
 		 */
-		void spawnSubdivisionCacheNode(SubdivisionConfirmMessage triangle) {
+		private void spawnSubdivisionCacheNode(final SubdivisionConfirmMessage triangle) {
 			assert subdivBlock;
 
 			// TODO: make sure we generate a truly unique id - for a random long
 			// the risk of a collision is really small, but nevertheless
 			// nonzero.
 			final long newId = (new Random()).nextLong();
-
 			final CountDownLatch cd = new CountDownLatch(2);
 
-			String localHost;
-			try {
-				localHost = Inet4Address.getLocalHost().getHostAddress();
-			} catch (UnknownHostException e1) {
-				e1.printStackTrace();
+			final ServerSocket sockFutureNeighbors = allocateFutureNodeSocket();
+			if (sockFutureNeighbors == null) {
 				return;
 			}
 
-			ServerSocket sockFutureNeighbors;
-			try {
-				sockFutureNeighbors = new ServerSocket(0);
-			} catch (IOException e2) {
-				e2.printStackTrace();
-				logger.write("failed to allocate ServerSocket for new cache node");
+			final InetSocketAddress adr = getFutureNodeAdr(sockFutureNeighbors);
+			if (adr == null) {
 				return;
 			}
 
-			final InetSocketAddress adr = new InetSocketAddress(localHost, sockFutureNeighbors.getLocalPort());
+			final LocationOfNode locationOfNode = calculateFutureNodeLocation(triangle);
 
 			// TODO: how does the admin get to connect with our newly added
 			// node? Also, if starting new nodes involves physically
@@ -1026,19 +1018,6 @@ public class CacheNode {
 			// introduces a sleep time during which multiple cache nodes running
 			// the same physical node can interleave.
 			final NodeInfo nodeInfo = new NodeInfo(connectionToAdmin.ADDRESS, adr, null, newId);
-
-			// the position of the new node is the average of the surrounding
-			// triangle vertices
-			int xpos = 0, ypos = 0;
-			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
-				final NeighborConnector n = kv.getValue();
-				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
-					final LocationOfNode loc = kv.getKey().getLocationOfNode();
-					xpos += loc.x;
-					ypos += loc.y;
-				}
-			}
-			final LocationOfNode locationOfNode = new LocationOfNode(xpos / 3, ypos / 3);
 			nodeInfo.updateLocation(locationOfNode);
 
 			final SubdivisionCommitMessage message = new SubdivisionCommitMessage(newId, nodeInfo);
@@ -1051,9 +1030,6 @@ public class CacheNode {
 				final NeighborConnector n = kv.getValue();
 				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
 					neighbors.add(kv.getKey());
-					final LocationOfNode loc = kv.getKey().getLocationOfNode();
-					xpos += loc.x;
-					ypos += loc.y;
 
 					if (n.nid == triangle.V0) {
 						onReceiveSubdivisionCommit(message, id);
@@ -1068,7 +1044,7 @@ public class CacheNode {
 
 							@Override
 							public void onConnectionAborted() {
-								// TODO
+								// nothing to do - timeout happens on `cd`
 							}
 						});
 					}
@@ -1100,6 +1076,45 @@ public class CacheNode {
 				logger.write("failure spawning cache node");
 				e.printStackTrace();
 			}
+		}
+
+		private ServerSocket allocateFutureNodeSocket() {
+			try {
+				return new ServerSocket(0);
+			} catch (IOException e2) {
+				e2.printStackTrace();
+				logger.write("failed to allocate ServerSocket for new cache node");
+			}
+			return null;
+		}
+
+		private InetSocketAddress getFutureNodeAdr(ServerSocket sockFutureNeighbors) {
+			String localHost;
+			try {
+				localHost = Inet4Address.getLocalHost().getHostAddress();
+			} catch (UnknownHostException e1) {
+				e1.printStackTrace();
+				return null;
+			}
+
+			return new InetSocketAddress(localHost, sockFutureNeighbors.getLocalPort());
+		}
+
+		private LocationOfNode calculateFutureNodeLocation(final SubdivisionConfirmMessage triangle) {
+			// the position of the new node is the average of the surrounding
+			// triangle vertices
+			int xpos = 0, ypos = 0, cnt = 0;
+			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
+				final NeighborConnector n = kv.getValue();
+				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
+					final LocationOfNode loc = kv.getKey().getLocationOfNode();
+					xpos += loc.x;
+					ypos += loc.y;
+					++cnt;
+				}
+			}
+			assert cnt == 3;
+			return new LocationOfNode(xpos / 3, ypos / 3);
 		}
 	}
 
