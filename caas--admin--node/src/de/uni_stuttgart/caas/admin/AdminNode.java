@@ -178,7 +178,8 @@ public class AdminNode /* implements AutoClosable */{
 	}
 
 	private static AtomicInteger idSource = new AtomicInteger();
-
+	private AtomicInteger subdivCount = new AtomicInteger(0);
+	
 	/**
 	 * 
 	 * 
@@ -187,7 +188,6 @@ public class AdminNode /* implements AutoClosable */{
 	private class NodeConnector extends FullDuplexMPI {
 		private final InetSocketAddress clientAddress;
 		private volatile long nodeId = -1;
-		private int subdivCount = 0;
 
 		/**
 		 * 
@@ -233,7 +233,7 @@ public class AdminNode /* implements AutoClosable */{
 				// is spawned locally by whomever initiated the subdivision. In
 				// a long-term view, we need the admin to actually deploy a new
 				// node.
-				System.out.println("admin: grid subdivision no #" + (++subdivCount));
+				System.out.println("admin: grid subdivision no #" + subdivCount.incrementAndGet());
 				return new ConfirmationMessage(1
 						, "ok");
 
