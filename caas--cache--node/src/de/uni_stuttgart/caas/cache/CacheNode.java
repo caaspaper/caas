@@ -1116,14 +1116,17 @@ public class CacheNode {
 			int xpos = 0, ypos = 0, cnt = 0;
 			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
 				final NeighborConnector n = kv.getValue();
-				if (n.nid == triangle.V0 || n.nid == triangle.V1 || n.nid == triangle.V2) {
+				if (n.nid == triangle.V1 || n.nid == triangle.V2) {
 					final LocationOfNode loc = kv.getKey().getLocationOfNode();
 					xpos += loc.x;
 					ypos += loc.y;
 					++cnt;
 				}
+				assert n.nid != triangle.V0;
 			}
-			assert cnt == 3;
+			assert cnt == 2;
+			xpos += position.x;
+			ypos += position.y;
 			return new LocationOfNode(xpos / 3, ypos / 3);
 		}
 	}
