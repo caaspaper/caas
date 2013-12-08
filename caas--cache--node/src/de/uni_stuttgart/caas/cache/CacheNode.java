@@ -1117,7 +1117,7 @@ public class CacheNode {
 		private LocationOfNode calculateFutureNodeLocation(final SubdivisionConfirmMessage triangle) {
 			// the position of the new node is the average of the surrounding
 			// triangle vertices
-			int xpos = 0, ypos = 0, cnt = 0;
+			long xpos = 0, ypos = 0, cnt = 0;
 			for (Entry<NodeInfo, NeighborConnector> kv : neighborConnectors.entrySet()) {
 				final NeighborConnector n = kv.getValue();
 				if (n.nid == triangle.V1 || n.nid == triangle.V2) {
@@ -1131,7 +1131,7 @@ public class CacheNode {
 			assert cnt == 2;
 			xpos += position.x;
 			ypos += position.y;
-			return new LocationOfNode(xpos / 3, ypos / 3);
+			return new LocationOfNode((int)(xpos / 3), (int)(ypos / 3) );
 		}
 	}
 
