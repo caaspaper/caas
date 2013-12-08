@@ -28,6 +28,8 @@ public class Startup {
 				config.add(CacheBehaviourFlags.SCALEOUT);
 			} else if (s.equals("-propagation")) {
 				config.add(CacheBehaviourFlags.NEIGHBOR_PROPAGATION);
+			} else if (s.equals("-reuseclientconn")) {
+				config.add(CacheBehaviourFlags.REUSE_CLIENT_CONN);
 			}
 		}
 		try {

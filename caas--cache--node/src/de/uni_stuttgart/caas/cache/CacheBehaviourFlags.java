@@ -16,6 +16,13 @@ public enum CacheBehaviourFlags {
 	SCALEIN,
 
 	/** TODO - not implemented yet */
-	SCALEOUT
+	SCALEOUT,
+
+	/**
+	 * Configures cache nodes to keep response connections to clients open and
+	 * to re-use them for future responses. The primary use for this is
+	 * benchmarking, in production this would be an easy door for DOS attacks.
+	 */
+	REUSE_CLIENT_CONN,
 
 }

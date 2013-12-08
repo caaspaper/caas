@@ -744,13 +744,18 @@ public class CacheNode {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		sendQueryResultToClient(message);
+		
+		try {
+			sendQueryResultToClient(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/** Represents a currently opened client connection */
 	private static class ClientConnection {
 
-		public ClientConnection(String host, int port) throws IOException {
+		public ClientConnection(String host, int port, final boolean singleUse) throws IOException {
 			client = new Socket(host, port);
 			clientOut = new ObjectOutputStream(client.getOutputStream());
 
@@ -759,12 +764,19 @@ public class CacheNode {
 				public void run() {
 					try {
 						// TODO: handle closing and error scenarios
-						while (true) {
+						do {
 							final QueryMessage message = messages.take();
 							clientOut.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
 							clientOut.flush();
-						}
+						} while (!singleUse);
 					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					try {
+						clientOut.close();
+						client.close();
+					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
@@ -786,25 +798,27 @@ public class CacheNode {
 	 * Send a processed query result back to the client where the query
 	 * originated. Right now, the response is a dummy.
 	 * */
-	private void sendQueryResultToClient(final QueryMessage message) {
+	private void sendQueryResultToClient(final QueryMessage message) throws IOException {
 		assert message != null;
 
 		final String key = message.CLIENT_IP + message.CLIENT_PORT;
-		ClientConnection con = pendingClientConnections.get(key);
-		if (con == null) {
-			synchronized (pendingClientConnections) {
-				con = pendingClientConnections.get(key);
-				if (con == null) {
-					try {
-						con = new ClientConnection(message.CLIENT_IP, message.CLIENT_PORT);
-					} catch (IOException e) {
-						e.printStackTrace();
-						return;
+
+		ClientConnection con = null;
+		if (config.contains(CacheBehaviourFlags.REUSE_CLIENT_CONN)) {
+			con = pendingClientConnections.get(key);
+			if (con == null) {
+				synchronized (pendingClientConnections) {
+					con = pendingClientConnections.get(key);
+					if (con == null) {
+						con = new ClientConnection(message.CLIENT_IP, message.CLIENT_PORT, false);
+						pendingClientConnections.put(key, con);
 					}
-					pendingClientConnections.put(key, con);
 				}
 			}
+		} else {
+			con = new ClientConnection(message.CLIENT_IP, message.CLIENT_PORT, true);
 		}
+
 		con.enqueueResponse(message);
 	}
 

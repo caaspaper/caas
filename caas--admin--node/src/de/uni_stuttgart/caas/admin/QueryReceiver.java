@@ -1,6 +1,7 @@
 package de.uni_stuttgart.caas.admin;
 
 import java.io.BufferedWriter;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -151,6 +152,9 @@ public final class QueryReceiver {
 								o = in.readObject();
 							} catch (ClassNotFoundException e) {
 								e.printStackTrace();
+								break;
+							} catch (EOFException e) {
+								// expected
 								break;
 							} catch (IOException e) {
 								e.printStackTrace();
