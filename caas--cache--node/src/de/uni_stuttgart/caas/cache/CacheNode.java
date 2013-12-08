@@ -2,7 +2,6 @@ package de.uni_stuttgart.caas.cache;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.lang.management.MemoryType;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -42,6 +41,7 @@ public class CacheNode {
 	 * forwarding queries to neighbors.
 	 */
 	public static final int MAX_QUERIES_PER_SECOND = 20;
+	private final LoadTracker tracker;
 
 	/**
 	 * Fake time for processing a query if the query produces a cache hit
@@ -67,12 +67,6 @@ public class CacheNode {
 	 * handshake
 	 */
 	public long id = -1;
-
-	/**
-	 * List containing time stamps of the most recent queries to calculate the
-	 * load on the cache node. Too old entries are removed during getLoad().
-	 */
-	private volatile LinkedBlockingQueue<Long> queryProcessTimes;
 
 	/**
 	 * Position of this node in the grid
@@ -126,8 +120,9 @@ public class CacheNode {
 	 * @throws IOException
 	 */
 	public CacheNode(InetSocketAddress addr, EnumSet<CacheBehaviourFlags> _config) throws IOException {
+		tracker = new LoadTracker(MAX_QUERIES_PER_SECOND, 1000);
+		
 		config = _config == null ? EnumSet.noneOf(CacheBehaviourFlags.class) : _config;
-		queryProcessTimes = new LinkedBlockingQueue<>();
 		logger = new LogSender(new InetSocketAddress("localhost", DEFAULT_LOG_RECEIVER_PORT));
 
 		if (addr.isUnresolved()) {
@@ -177,13 +172,13 @@ public class CacheNode {
 		assert _logger != null;
 		assert _serverSocket != null;
 		assert _position != null;
+		
+		tracker = new LoadTracker(MAX_QUERIES_PER_SECOND, 1000);
 
 		// TODO: establish our own channel to talk to admin
 		connectionToAdmin = _existingAdminChannel;
 
 		config = _config;
-
-		queryProcessTimes = new LinkedBlockingQueue<>();
 		serverSocket = _serverSocket;
 
 		id = _id;
@@ -203,18 +198,6 @@ public class CacheNode {
 			scaleIn.preventScaleIn(false);
 			activationMonitor.notifyAll();
 		}
-	}
-
-	/**
-	 * Process an AddToGridMessage adding neighbor info and own location
-	 * 
-	 * @param message
-	 *            the AddToGridMessage
-	 */
-	private void proccessAddToGridMessage(AddToGridMessage message) {
-		this.id = message.id;
-		this.position = message.locationOfNode;
-		addNeighboringNodes(message.getNeighboringNodes());
 	}
 
 	/**
@@ -239,16 +222,18 @@ public class CacheNode {
 	}
 
 	/**
-	 * Add new neighboring nodes
+	 * Process an AddToGridMessage adding neighbor info and own location
 	 * 
-	 * @param collection
-	 *            A collection of Information about neighboring nodes
+	 * @param message
+	 *            the AddToGridMessage
 	 */
-	private void addNeighboringNodes(Collection<NodeInfo> neighboringNodesSource) {
-		// store nodes for now. Later, in onActivate(), we establish connections
-		// to all of them
+	private void proccessAddToGridMessage(AddToGridMessage message) {
+		this.id = message.id;
+		this.position = message.locationOfNode;
+
+		// only store nodes for now. onActivate() then establishes connections
 		neighborConnectors = new HashMap<>();
-		for (NodeInfo info : neighboringNodesSource) {
+		for (NodeInfo info : message.getNeighboringNodes()) {
 			neighborConnectors.put(info, null);
 		}
 	}
@@ -334,8 +319,7 @@ public class CacheNode {
 									final long nid = GetNeighborId();
 
 									// TODO: to improve this, the HM could be
-									// keyed
-									// on the id and not the NodeInfo
+									// keyed on the id and not the NodeInfo
 									for (NodeInfo info : neighborConnectors.keySet()) {
 										if (info.ID == nid) {
 											synchronized (newMap) {
@@ -633,15 +617,7 @@ public class CacheNode {
 	 * @return a double representing the load
 	 */
 	public double getLoad() {
-		final long currentTime = System.currentTimeMillis();
-		while (!queryProcessTimes.isEmpty()) {
-			if (currentTime - queryProcessTimes.peek() > 1000) {
-				queryProcessTimes.poll();
-			} else {
-				break;
-			}
-		}
-		return (double) queryProcessTimes.size() / MAX_QUERIES_PER_SECOND;
+		return tracker.getLoad();
 	}
 
 	/**
@@ -745,7 +721,7 @@ public class CacheNode {
 
 		// remember the message's time of processing so we can calculate the
 		// load over a sliding window of recent queries.
-		queryProcessTimes.add(System.currentTimeMillis());
+		tracker.addEvent();
 
 		// TODO: simulate real caching behavior ...
 		try {
