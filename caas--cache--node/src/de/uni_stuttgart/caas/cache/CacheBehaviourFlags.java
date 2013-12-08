@@ -25,4 +25,10 @@ public enum CacheBehaviourFlags {
 	 */
 	REUSE_CLIENT_CONN,
 
+	/**
+	 * Add a fake latency of 2ms to all neighbor messages. This is useful when
+	 * testing locally over loopback.
+	 */
+	ADD_FAKE_NEIGHBOR_LATENCY,
+
 }

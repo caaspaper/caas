@@ -30,6 +30,8 @@ public class Startup {
 				config.add(CacheBehaviourFlags.NEIGHBOR_PROPAGATION);
 			} else if (s.equals("-reuseclientconn")) {
 				config.add(CacheBehaviourFlags.REUSE_CLIENT_CONN);
+			} else if (s.equals("-fakeneighborlatency")) {
+				config.add(CacheBehaviourFlags.ADD_FAKE_NEIGHBOR_LATENCY);
 			}
 		}
 		try {

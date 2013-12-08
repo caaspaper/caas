@@ -465,12 +465,13 @@ public class CacheNode {
 			final MessageType kind = message.getMessageType();
 			logger.write("cache node: received: " + kind + " from neighbor connection " + toString());
 
-			// (hack) extra penalty to simulate latency in a real, physical
-			// network
-			try {
-				Thread.sleep(FAKE_NEIGHBOR_LATENCY);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			// extra penalty to simulate latency in a real, physical network
+			if(config.contains(CacheBehaviourFlags.ADD_FAKE_NEIGHBOR_LATENCY)) {
+				try {
+					Thread.sleep(FAKE_NEIGHBOR_LATENCY);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
 
 			if (kind == MessageType.QUERY_MESSAGE) {
@@ -744,7 +745,7 @@ public class CacheNode {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		try {
 			sendQueryResultToClient(message);
 		} catch (IOException e) {
