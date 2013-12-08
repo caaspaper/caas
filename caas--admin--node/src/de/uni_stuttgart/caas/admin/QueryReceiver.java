@@ -36,7 +36,7 @@ public final class QueryReceiver {
 		syncPoint = new CountDownLatch(numOfQueriesSent);
 
 		// extra-long backlog to make sure we can process incoming queries
-		serverSocket = new ServerSocket(0, 256);
+		serverSocket = new ServerSocket(0, 1024);
 
 		BufferedWriter buff = null;
 
@@ -97,7 +97,7 @@ public final class QueryReceiver {
 			stop = true;
 		}
 
-		if(writer != null) {
+		if (writer != null) {
 			try {
 				writer.close();
 			} catch (IOException e) {
@@ -143,18 +143,24 @@ public final class QueryReceiver {
 							e.printStackTrace();
 							return;
 						}
-						Object o;
-						try {
-							o = in.readObject();
-						} catch (ClassNotFoundException e) {
-							e.printStackTrace();
-							return;
-						} catch (IOException e) {
-							e.printStackTrace();
-							return;
-						}
-						long time = System.nanoTime();
-						if (o instanceof QueryResult) {
+
+						while (true) {
+							Object o;
+
+							try {
+								o = in.readObject();
+							} catch (ClassNotFoundException e) {
+								e.printStackTrace();
+								break;
+							} catch (IOException e) {
+								e.printStackTrace();
+								break;
+							}
+							long time = System.nanoTime();
+							if (!(o instanceof QueryResult)) {
+								logger.write("didn't receive QueryResult object, do not now what to do");
+								continue;
+							}
 
 							logger.write("received answer to a query");
 							QueryResult r = (QueryResult) o;
@@ -163,7 +169,8 @@ public final class QueryReceiver {
 
 							// TODO: lock time is potentially too long.
 							synchronized (syncPoint) {
-								// if the stop event happened, no further times
+								// if the stop event happened, no further
+								// times
 								// may be recorded
 								if (stop) {
 									return;
@@ -178,11 +185,8 @@ public final class QueryReceiver {
 								if (l1 % 100 == 0 || l1 < 50) {
 									System.out.println(l1);
 								}
-
 								syncPoint.countDown();
 							}
-						} else {
-							logger.write("didn't receive QueryResult object, do not now what to do");
 						}
 
 						try {
