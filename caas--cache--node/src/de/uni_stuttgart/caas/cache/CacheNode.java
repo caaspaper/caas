@@ -225,9 +225,9 @@ public class CacheNode {
 		currentState = CacheNodeState.DEAD;
 		connectionToAdmin.close();
 		connectionToAdmin = null;
-		
-		synchronized(regenerateNeighborConnectorsMonitor) {
-			for(NeighborConnector con : neighborConnectors.values()) {
+
+		synchronized (regenerateNeighborConnectorsMonitor) {
+			for (NeighborConnector con : neighborConnectors.values()) {
 				con.close();
 			}
 			neighborConnectors = null;
@@ -661,6 +661,10 @@ public class CacheNode {
 		if (!message.isPropagtionThroughNetworkAllowed()) {
 			logger.write("got forwarded message, no further propagation possible");
 			processQueryLocally(message);
+
+			if (getLoad() > 1 && config.contains(CacheBehaviourFlags.SCALEIN)) {
+				scaleIn.attemptScaleIn();
+			}
 			return;
 		}
 
@@ -685,22 +689,19 @@ public class CacheNode {
 		if (minDistance < calculateDistance(position, queryLocation)) {
 			// greedy routing
 			closestNodeToQuery.getValue().sendMessageAsync(message);
-		} else {
-			if (getLoad() > 1) {
-				if(config.contains(CacheBehaviourFlags.NEIGHBOR_PROPAGATION)) {
-					logger.write("forwarding message as local load becomes too high");
-					forwardMessageToNeighbor(message);
-				}
-				else {
-					processQueryLocally(message);
-				}
-
-				if (config.contains(CacheBehaviourFlags.SCALEIN)) {
-					scaleIn.attemptScaleIn();
-				}
+		} else if (getLoad() > 1) {
+			if (config.contains(CacheBehaviourFlags.NEIGHBOR_PROPAGATION)) {
+				logger.write("forwarding message as local load becomes too high");
+				forwardMessageToNeighbor(message);
 			} else {
 				processQueryLocally(message);
 			}
+
+			if (config.contains(CacheBehaviourFlags.SCALEIN)) {
+				scaleIn.attemptScaleIn();
+			}
+		} else {
+			processQueryLocally(message);
 		}
 	}
 
@@ -709,7 +710,6 @@ public class CacheNode {
 		assert message != null;
 
 		int randomNum = (int) (Math.random() * neighborConnectors.size());
-
 		for (NodeInfo n : neighborConnectors.keySet()) {
 			if (randomNum == 0) {
 				message.stopPropagationOfTheMessage();
