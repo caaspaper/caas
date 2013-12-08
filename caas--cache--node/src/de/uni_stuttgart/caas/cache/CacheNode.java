@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -746,6 +747,41 @@ public class CacheNode {
 		sendQueryResultToClient(message);
 	}
 
+	/** Represents a currently opened client connection */
+	private static class ClientConnection {
+
+		public ClientConnection(String host, int port) throws IOException {
+			client = new Socket(host, port);
+			clientOut = new ObjectOutputStream(client.getOutputStream());
+
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						// TODO: handle closing and error scenarios
+						while (true) {
+							final QueryMessage message = messages.take();
+							clientOut.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
+							clientOut.flush();
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}).start();
+		}
+
+		public void enqueueResponse(final QueryMessage message) {
+			messages.add(message);
+		}
+
+		private Socket client;
+		private ObjectOutputStream clientOut;
+		private LinkedBlockingQueue<QueryMessage> messages = new LinkedBlockingQueue<>();
+	};
+
+	private ConcurrentHashMap<String, ClientConnection> pendingClientConnections = new ConcurrentHashMap<>();
+
 	/**
 	 * Send a processed query result back to the client where the query
 	 * originated. Right now, the response is a dummy.
@@ -753,27 +789,23 @@ public class CacheNode {
 	private void sendQueryResultToClient(final QueryMessage message) {
 		assert message != null;
 
-		new Thread(new Runnable() {
-			// kick off an extra thread to make sure the cache node is not
-			// blocked out. In a benchmark scenario, this is important as we
-			// would otherwise be measuring the speed of the measurement device.
-
-			@Override
-			public void run() {
-				try {
-					Socket client = new Socket(message.CLIENT_IP, message.CLIENT_PORT);
-
-					ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-					out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
-					out.flush();
-					
-					out.close();
-					client.close();
-				} catch (Exception e) {
-					e.printStackTrace();
+		final String key = message.CLIENT_IP + message.CLIENT_PORT;
+		ClientConnection con = pendingClientConnections.get(key);
+		if (con == null) {
+			synchronized (pendingClientConnections) {
+				con = pendingClientConnections.get(key);
+				if (con == null) {
+					try {
+						con = new ClientConnection(message.CLIENT_IP, message.CLIENT_PORT);
+					} catch (IOException e) {
+						e.printStackTrace();
+						return;
+					}
+					pendingClientConnections.put(key, con);
 				}
 			}
-		}).start();
+		}
+		con.enqueueResponse(message);
 	}
 
 	/** Handles the Scale-In method of Load Balancing. */
