@@ -466,7 +466,7 @@ public class CacheNode {
 			logger.write("cache node: received: " + kind + " from neighbor connection " + toString());
 
 			// extra penalty to simulate latency in a real, physical network
-			if(config.contains(CacheBehaviourFlags.ADD_FAKE_NEIGHBOR_LATENCY)) {
+			if (config.contains(CacheBehaviourFlags.ADD_FAKE_NEIGHBOR_LATENCY)) {
 				try {
 					Thread.sleep(FAKE_NEIGHBOR_LATENCY);
 				} catch (InterruptedException e) {
@@ -474,29 +474,37 @@ public class CacheNode {
 				}
 			}
 
-			if (kind == MessageType.QUERY_MESSAGE) {
+			switch (kind) {
+			case QUERY_MESSAGE:
 				processQuery((QueryMessage) message);
 				return new ConfirmationMessage(1, "message processed");
-			} else if (kind == MessageType.PUBLISH_ID) {
+
+			case PUBLISH_ID:
 				onReceiveId((PublishIdMessage) message);
 				return new ConfirmationMessage(0, "id received");
-			} else if (kind == MessageType.LOAD_MESSAGE) {
+
+			case LOAD_MESSAGE:
 				for (NodeInfo n : neighborConnectors.keySet()) {
 					if (n.ID == nid) {
 						n.setLoad(((LoadMessage) message).LOAD);
 						break;
 					}
 				}
-			} else if (kind == MessageType.SUBDIV_REQUEST) {
+				break;
+
+			case SUBDIV_REQUEST:
 				scaleIn.onReceiveSubdivisionRequest((SubdivisionRequestMessage) message, nid);
 				return new ConfirmationMessage(1, "subdiv request processed");
-			} else if (kind == MessageType.SUBDIV_COMMIT) {
+
+			case SUBDIV_COMMIT:
 				return scaleIn.onReceiveSubdivisionCommit((SubdivisionCommitMessage) message, nid);
-			} else if (kind == MessageType.SUBDIV_CONFIRM) {
+
+			case SUBDIV_CONFIRM:
 				return scaleIn.onReceiveSubdivisionConfirm((SubdivisionConfirmMessage) message, nid);
-			} else {
-				logger.write("cache node: unexpected neighbor message, reveived message was: " + message.getMessageType());
+			default:
+				break;
 			}
+
 			return null;
 		}
 
