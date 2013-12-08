@@ -2,8 +2,10 @@ package de.uni_stuttgart.caas.admin;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -40,13 +42,16 @@ public class QuerySender {
 
 		// TODO: hardcoded for now because getHostName() gives incorrect value
 		// on the elb, thus causing queries to be not received.
-		String tempHost = "elb"; /*
-								 * try { tempHost =
-								 * Inet4Address.getLocalHost().getHostName(); }
-								 * catch (UnknownHostException e2) {
-								 * e2.printStackTrace(); assert false; return;
-								 * };
-								 */
+		String tempHost;
+		try {
+			tempHost = Inet4Address.getLocalHost().getCanonicalHostName();
+		} catch (UnknownHostException e2) {
+			e2.printStackTrace();
+			assert false;
+			return;
+		}
+		
+		System.out.println("Query response host: " + tempHost);
 
 		final String localHost = tempHost;
 		final int port = receiver.getPort();
