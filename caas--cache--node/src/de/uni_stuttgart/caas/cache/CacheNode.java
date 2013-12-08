@@ -686,9 +686,14 @@ public class CacheNode {
 			// greedy routing
 			closestNodeToQuery.getValue().sendMessageAsync(message);
 		} else {
-			if (config.contains(CacheBehaviourFlags.NEIGHBOR_PROPAGATION) && getLoad() > 1) {
-				logger.write("forwarding message as local load is too high");
-				forwardMessageToNeighbor(message);
+			if (getLoad() > 1) {
+				if(config.contains(CacheBehaviourFlags.NEIGHBOR_PROPAGATION)) {
+					logger.write("forwarding message as local load becomes too high");
+					forwardMessageToNeighbor(message);
+				}
+				else {
+					processQueryLocally(message);
+				}
 
 				if (config.contains(CacheBehaviourFlags.SCALEIN)) {
 					scaleIn.attemptScaleIn();
