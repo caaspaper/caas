@@ -766,13 +766,9 @@ public class CacheNode {
 					ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
 					out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
 					out.flush();
-
-					// note: Let the GC collect the socket ... closing
-					// immediately can cause writeObject to fail
-					/*
-					 * try { Thread.sleep(500); } catch (InterruptedException e)
-					 * { e.printStackTrace(); } out.close(); client.close();
-					 */
+					
+					out.close();
+					client.close();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
