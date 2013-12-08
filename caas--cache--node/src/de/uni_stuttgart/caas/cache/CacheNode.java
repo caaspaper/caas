@@ -762,6 +762,7 @@ public class CacheNode {
 
 					ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
 					out.writeObject(new QueryResult(message.getDebuggingInfo(), message.ID));
+					out.flush();
 
 					// note: Let the GC collect the socket ... closing
 					// immediately can cause writeObject to fail
