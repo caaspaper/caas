@@ -770,9 +770,7 @@ public class CacheNode {
 					 * try { Thread.sleep(500); } catch (InterruptedException e)
 					 * { e.printStackTrace(); } out.close(); client.close();
 					 */
-				} catch (UnknownHostException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -1094,6 +1092,11 @@ public class CacheNode {
 			} catch (IOException e) {
 				logger.write("failure spawning cache node");
 				e.printStackTrace();
+			}
+			
+			// if we do have a valid admin connection, inform admin
+			if(connectionToAdmin != null) {
+				connectionToAdmin.sendMessageAsync(message);
 			}
 		}
 

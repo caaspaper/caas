@@ -187,6 +187,7 @@ public class AdminNode /* implements AutoClosable */{
 	private class NodeConnector extends FullDuplexMPI {
 		private final InetSocketAddress clientAddress;
 		private volatile long nodeId = -1;
+		private int subdivCount = 0;
 
 		/**
 		 * 
@@ -226,6 +227,15 @@ public class AdminNode /* implements AutoClosable */{
 					new Thread(new InitGridHelper()).start();
 				}
 				return response;
+
+			case SUBDIV_COMMIT:
+				// TODO: handle subdivision event. Right now, the new CacheNode
+				// is spawned locally by whomever initiated the subdivision. In
+				// a long-term view, we need the admin to actually deploy a new
+				// node.
+				System.out.println("admin: grid subdivision no #" + (++subdivCount));
+				return new ConfirmationMessage(1
+						, "ok");
 
 			default:
 				break;
