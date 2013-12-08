@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.NumberFormat;
+import java.util.EnumSet;
 import java.util.regex.Pattern;
 
 import javax.swing.JMenu;
@@ -27,6 +28,7 @@ import javax.swing.SwingUtilities;
 
 import de.uni_stuttgart.caas.admin.AdminNode;
 import de.uni_stuttgart.caas.base.LogReceiver;
+import de.uni_stuttgart.caas.cache.CacheBehaviourFlags;
 import de.uni_stuttgart.caas.cache.CacheNode;
 import de.uni_stuttgart.caas.testgui.ImprovedFormattedTextField;
 import de.uni_stuttgart.caas.testgui.RegexFormatter;
@@ -148,11 +150,17 @@ public class MainWindow {
 			public void actionPerformed(ActionEvent arg0) {
 				System.out.println("Launching " + numNodesField.getValue() + " local nodes");
 				int numOfNodes = Integer.parseInt(numNodesField.getText());
+				
+				final EnumSet<CacheBehaviourFlags> config = EnumSet.noneOf(CacheBehaviourFlags.class);
+				config.add(CacheBehaviourFlags.NEIGHBOR_PROPAGATION);
+				config.add(CacheBehaviourFlags.REUSE_CLIENT_CONN);
+				config.add(CacheBehaviourFlags.SCALEIN);
+				
 				for (int i = 0; i < numOfNodes; i++) {
 					try {
 						final String[] cache_args = addressOfAdminField.getText().split(":"); 
 						final String port = cache_args.length==2 ? cache_args[1] : adminPortField.getText();
-						new CacheNode(addressOfAdminField.getText(), Integer.parseInt(adminPortField.getText()),null);
+						new CacheNode(addressOfAdminField.getText(), Integer.parseInt(adminPortField.getText()), config);
 					} catch (IOException e) {
 						JOptionPane.showMessageDialog(frame, "One of the nodes could not connect to the admin", "Critical Error", JOptionPane.ERROR_MESSAGE);
 						break;
