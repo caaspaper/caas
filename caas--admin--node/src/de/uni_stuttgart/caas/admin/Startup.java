@@ -76,32 +76,23 @@ public class Startup {
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		if(args.length < 2) {
+			System.out.println("Too few arguments");
+			return;
+		}
 		
 		if(!processArguments(args)) {
 			return;
 		}	
 		
+		final int portNumber = Integer.parseInt(args[0]);
+		final int initialCapacity = Integer.parseInt(args[1]);
+
 		try {
-			if (args.length == 0) {
-				admin = new CustomAdminNode();
-			} else if (args.length == 2) {
-
-				final int portNumber = Integer.parseInt(args[0]);
-				final int initialCapacity = Integer.parseInt(args[1]);
-
-				try {
-					admin = new CustomAdminNode(portNumber, initialCapacity);
-				} catch (IllegalArgumentException e) {
-					System.out.println("Invalid argument");
-					e.printStackTrace();
-				}
-			} else {
-				System.out.println("Invalid number of arguments. Please enter port number and initial grid capacity again.");
-			}
-		} catch (IOException e) {
-			System.out.println("Failed to launch AdminNode (2)");
+			admin = new CustomAdminNode(portNumber, initialCapacity);
+		} catch (IllegalArgumentException | IOException e) {
+			System.out.println("Invalid argument");
 			e.printStackTrace();
-			return;
 		}
 
 		assert admin != null;
