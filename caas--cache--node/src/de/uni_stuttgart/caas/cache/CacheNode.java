@@ -169,13 +169,16 @@ public class CacheNode {
 	 * @throws IOException
 	 */
 	private CacheNode(long _id, LocationOfNode _position, List<NodeInfo> neighbors, LogSender _logger, ServerSocket _serverSocket,
-			EnumSet<CacheBehaviourFlags> _config) throws IOException {
+			EnumSet<CacheBehaviourFlags> _config, AdminConnector _existingAdminChannel) throws IOException {
 
 		assert _config != null;
 		assert neighbors != null;
 		assert _logger != null;
 		assert _serverSocket != null;
 		assert _position != null;
+
+		// TODO: establish our own channel to talk to admin
+		connectionToAdmin = _existingAdminChannel;
 
 		config = _config;
 
@@ -1088,14 +1091,14 @@ public class CacheNode {
 
 			// actually spawn the cache node
 			try {
-				new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors, config);
+				new CacheNode(newId, locationOfNode, neighbors, logger, sockFutureNeighbors, config, connectionToAdmin);
 			} catch (IOException e) {
 				logger.write("failure spawning cache node");
 				e.printStackTrace();
 			}
-			
+
 			// if we do have a valid admin connection, inform admin
-			if(connectionToAdmin != null) {
+			if (connectionToAdmin != null) {
 				connectionToAdmin.sendMessageAsync(message);
 			}
 		}
