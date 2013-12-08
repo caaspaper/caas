@@ -97,10 +97,12 @@ public final class QueryReceiver {
 			stop = true;
 		}
 
-		try {
-			writer.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		if(writer != null) {
+			try {
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		return missing;
 	}
