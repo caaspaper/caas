@@ -48,4 +48,12 @@ public class LoadTracker {
 	public void addEvent() {
 		queryProcessTimes.add(System.currentTimeMillis());
 	}
+
+	/**
+	 * Clear all recorded events. This means the current load estimate becomes 0
+	 * again, and only increases as more events come in.
+	 */
+	public void reset() {
+		queryProcessTimes.clear();
+	}
 }

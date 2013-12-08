@@ -118,7 +118,7 @@ public class CacheNode {
 	 */
 	public CacheNode(InetSocketAddress addr, EnumSet<CacheBehaviourFlags> _config) throws IOException {
 		tracker = new LoadTracker(MAX_QUERIES_PER_SECOND, 1000);
-		
+
 		config = _config == null ? EnumSet.noneOf(CacheBehaviourFlags.class) : _config;
 		logger = new LogSender(new InetSocketAddress("localhost", DEFAULT_LOG_RECEIVER_PORT));
 
@@ -169,7 +169,7 @@ public class CacheNode {
 		assert _logger != null;
 		assert _serverSocket != null;
 		assert _position != null;
-		
+
 		tracker = new LoadTracker(MAX_QUERIES_PER_SECOND, 1000);
 
 		// TODO: establish our own channel to talk to admin
@@ -734,7 +734,6 @@ public class CacheNode {
 		}
 	}
 
-
 	private ConcurrentHashMap<String, ClientConnection> pendingClientConnections = new ConcurrentHashMap<>();
 
 	/**
@@ -976,6 +975,11 @@ public class CacheNode {
 									neighborConnectors = clone;
 								}
 
+								// reset the load tracker to avoid excessive
+								// adding of nodes in regions with high load. We
+								// should rather wait a bit and see if adding
+								// the new improved the situation.
+								tracker.reset();
 								subdivBlock = false;
 							}
 						};
