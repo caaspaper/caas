@@ -50,7 +50,12 @@ public class QuerySender {
 			assert false;
 			return;
 		}
-		
+
+		// (HACK) still don't know how to get the correct host name on elb
+		if (tempHost.equals("elbn.infra.informatik.uni-stuttgart.de")) {
+			tempHost = "elb";
+		}
+
 		System.out.println("Query response host: " + tempHost);
 
 		final String localHost = tempHost;
