@@ -1,0 +1,67 @@
+n = 4, k = 20, uniform, scalein
+
+
+n = 4, k = 20, uniform
+
+
+n = 4, k = 20, hotspot, scalein
+
+
+n = 4, k = 20, hotspot
+
+
+
+
+
+
+
+n = 8, k = 20, uniform, scalein
+84/87
+
+
+n = 8, k = 20, uniform
+
+
+n = 8, k = 20, hotspot, scalein
+183/107
+
+
+n = 8, k = 20, hotspot
+514/323
+
+
+
+
+n = 12, k = 20, uniform, scalein
+106/98
+
+
+n = 12, k = 20, uniform
+
+
+
+n = 12, k = 20, hotspot, scalein
+528/131
+
+
+n = 12, k = 20, hotspot
+1829/517
+
+
+
+
+
+n = 16, k = 20, uniform, scalein
+108/103
+
+
+n = 16, k = 20, uniform
+136/124
+
+
+n = 16, k = 20, hotspot, scalein
+345/138
+
+
+n = 16, k = 20, hotspot
+1388/669
