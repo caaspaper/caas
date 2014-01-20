@@ -1,0 +1,70 @@
+n = 4, k = 15, uniform, scalein
+63/56
+
+n = 4, k = 15, uniform
+73/60
+
+n = 4, k = 15, hotspot, scalein
+76/65
+
+n = 4, k = 15, hotspot
+75/56
+
+
+
+
+
+
+n = 8, k = 15, uniform, scalein
+85/84
+
+n = 8, k = 15, uniform
+95/93
+
+n = 8, k = 15, hotspot, scalein
+104/94
+
+n = 8, k = 15, hotspot
+121/95
+
+
+
+
+n = 12, k = 15, uniform, scalein
+92/93
+
+
+n = 12, k = 15, uniform
+95, 94
+
+
+n = 12, k = 15, hotspot, scalein
+108/98
+
+
+n = 12, k = 15, hotspot
+128/107
+
+
+
+
+
+n = 16, k = 15, uniform, scalein
+100/95
+
+
+n = 16, k = 15, uniform
+
+
+
+n = 16, k = 15, hotspot, scalein
+135/124
+
+
+n = 16, k = 15, hotspot
+133/131
+
+
+
+
+
