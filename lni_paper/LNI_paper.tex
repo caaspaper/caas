@@ -22,17 +22,16 @@ and measurements of relative scalability under different cache overlay sizes, qu
 Our results indicate that the system achieves almost linear relative scalability for both uniform and non-uniform query distributions.
 \end{abstract}
 
-\section{Introduction}
+\section{Introduction and Foundations}
 Location-based services (LBS) are data-intensive applications which use the geographic behavior of the user in order to process queries. 
 These queries access spatial data, which correspond to physical geographic regions. 
 A typical example is a route-planning application for smartphones. 
-The user sends an address as a query, and in response to the query, the application delivers data, 
-which could be the corresponding portion of the map. 
-A fundamental problem of LBS is how to allocate the workload in the system, 
+The user sends an address as a query, and in response to the query, the application delivers data, such as the corresponding portion of the map. 
+A fundamental problem of LBS is how to allocate workload in the system, 
 so as to guarantee low latency and efficiency in processing these queries. 
-Much research has focused on developing load-balancing mechanisms for distributed systems with spatial data.. 
+Much research has focused on load-balancing mechanisms for distributed systems with spatial data.
 
-However in an LBS, both data and query workloads have spatial and temporal aspects, 
+However in an LBS, both query workloads and data have spatial and temporal aspects, 
 which dynamically change and thus require special considerations. 
 Query loads can vary depending on time or geographic density of users. 
 For example, fewer queries are sent late at night or in rural areas. 
@@ -57,31 +56,13 @@ The idea is that the overlay automatically decides when to add or remove nodes, 
 Adding nodes is referred to as \emph{scaling-in}, whereas removing nodes is referred to as \emph{scaling-out.}  
 In the scope of our project, we investigate whether scaling-out mitigates dynamic peaks in a distributed spatial cache overlay. 
 
-\section{Foundations}
 Our system is based on \cite{disco:Luebbe}, \cite{MultiLevel:Lueb2}. 
 The data region is partitioned into a 2D grid. 
-Then a distributed cache overlay is built on top and consists of nodes dedicated to caching data from certain grid partitions. 
-We refer to a cache node's coordinate as its \emph{cache focus}. 
-The concept of cache focus is important during load-balancing and when nodes cache new data items. 
-Suppose a node is serving a request but a local cache miss occurs. 
-The cache node makes room in its cache list for the requested data by removing the entry with the greatest distance to its cache focus. 
-Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. 
-Greedy routing is used to forward messages to the node that is closest to a certain coordinate. 
+Then a distributed cache overlay is built on top and consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as its \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
 
 \section{Architecture and Methodology}
-When designing our system architecture, as seen in figure \ref{arch}, 
-we had to deliver a grid of cache nodes that are organized spatially and deployed on a cluster. 
-These nodes can receive and forward queries.
-The system is launched and shut-down by an external GUI but is independent thereof. 
-The system runs remotely on a cluster of unspecified size and hardware 
-and can test the grid under different load-balancing and scaling mechanisms. 
-In addition to the given specifications, we included an administrative node, 
-asynchronous communication between nodes, and a basic logging system. 
-The administrative node only initializes the overlay construction. 
-
-Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
-The basic idea is that when a node's workload exceeds a given threshold, then the node communicates with its neighbors, 
-in order to confirm whether the overload could be releaved by the addition of a new node.
+Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster. Nodes receive external queries, which they can forward. An external GUI launches and shut-downs the system. The system runs remotely on a cluster of unspecified size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
+The idea is that when a node's load exceeds a given threshold, the node communicates with its neighbors to confirm whether the overload is relieved by adding a new node.
 
 \begin{figure}[!ht]
   \begin{center}
@@ -94,13 +75,11 @@ The goal of our experiment was to quantify latency under uniform and non-uniform
 In the uniform case, the target coordinates are distributed uniformly.
 However in the non-uniform case, we can simulate the formation of hotspots: 
 the target coordinate is obtained by sampling a Gaussian distribution 
-with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. 
-
-We measured request latency of the cache overlay under four experimental groups: 
-(1) under uniform queries with scaling-out, 
-(2) under uniform query distribution without scaling-out, 
-(3) under non-uniform query distributions with scaling-out, 
-(4) under non-uniform query distribution without scaling-out. 
+with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. We measured request latency of the cache overlay under four experimental groups, depending on type of distribution and presence of scaling-out: 
+(1) uniform plus scaling-out, 
+(2) uniform distribution, 
+(3) non-uniform plus scaling-out , 
+(4) non-uniform. 
 
 The distributed spatial cache overlay was launched on a cluster of up to 32 (virtual) machines. 
 Our benchmarking program sent each cache node $k$ queries per second. 
@@ -110,10 +89,8 @@ and a given number of nodes ($n = 8, 12, 16$).
 Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \cdot 10 \cdot k$. 
 
 \section{Results and Discussion}
-	For a given grid size $n$ and query rate $k$, figure \ref{results} shows the median latencies in milliseconds of all queries sent, 
-	according to experimental group. The values for tests run under uniform distribution/without scaling-out are not shown. 
-	They were, as expected, worse than uniform/scaling-out but better than hotspot/scaling-out and hotspot/without scaling-out. 
-	The range of the axes differ: for the purpose of clearly showing median times when $k=15$, the axis ranges only from 0 to 140 $ms$. % BRAUCHEN WIR DIESEN SATZ?
+	For a given grid size $n$ and query rate $k$, Figure \ref{results} shows the median latencies in milliseconds of all queries, 
+	according to experimental group. The values for the uniform distribution/without scaling-out group are not shown, but were, as expected, worse than uniform/scaling-out but better than hotspot/scaling-out and hotspot/without scaling-out. 
 
   \begin{figure}[htb]
     \begin{center}
@@ -129,7 +106,7 @@ latency increases markedly for the non-uniform (no scaling-out) group.
 In contrast, the median times for the non-uniform(scaling-out) group when $n=16$ remain within 30 percent of the median latencies 
 when $n=8$, although the total number of nodes has doubled and therefore the amount of queries being routed to the hotspot has also doubled.
 			
-\section{Conclusion and future work}
+\section{Conclusion and Future Work}
 In our study, we designed, implemented and evaluated a distributed spatial cache overlay 
 that is flexible enough to allow implementations of more sophisticated load-balancing schemes. 
 This cache overlay serves as the basis for further comparisons of various load-balancing mechanisms 
