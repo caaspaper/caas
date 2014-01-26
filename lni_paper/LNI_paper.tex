@@ -99,14 +99,14 @@ Each run lasted $10$ seconds, so the total number of queries sent to the grid du
 
   \begin{figure}[htb]
     \begin{center}
-      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.8\textwidth]{3d_k15}
+      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.86\textwidth]{3d_k15}
        \caption{\label{resultsk15} Median Request Latency in $ms$, k=15}
      \end{center}
 	\end{figure}
 	
 	 \begin{figure}[htb]
     \begin{center}
-      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.8\textwidth]{3d_k20}
+      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.86\textwidth]{3d_k20}
        \caption{\label{resultsk20} Median Request Latency $ms$, k=20}
      \end{center}
 	\end{figure}
@@ -131,13 +131,12 @@ Our preliminary results justify further evaluation of the system.
 Based on our preliminary results, our primary focus will be to implement scaling-in and elastic load-balancing 
 to handle changes in both global and relative load. 
 Since our current implementation exhibits a routing time of $\mathcal O (\sqrt{n})$, 
-we propose 2D skip list routing and local routing shortlists. 
-A 2D skip list could represent node connections, in that each cache node would not only maintain connections to their direct neighbors, 
-but also to some of their second-degree and third-degree neighbors, and so on. 
+we propose that our nodes keep skiplist-like connections 
+to 2nd or 3rd neighbors in order to achieve $\mathcal O (\log n)$ routing, as well as local routing shortlists. 
 With local routing shortlists, each cache node tracks recent queries which entered the overlay via that node, 
 along with the cache foci of all the nodes the query visited. 
 Nodes could then improve the first routing decision of subsequent queries that enter.
-This should drop the routing time to $\mathcal O(log(n))$.
+
 
 \bibliography{lniguide}
 \begin{thebibliography}{1}
