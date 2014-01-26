@@ -65,7 +65,7 @@ The idea is that when a node's load exceeds a given threshold, the node communic
 
 \begin{figure}[!ht]
   \begin{center}
-    \includegraphics[width=\textwidth]{arch1}
+    \includegraphics[width=\textwidth]{arch2-cropped}
     \caption{\label{arch}System Architecture of Cache as a Service}
   \end{center}
 \end{figure}
@@ -118,7 +118,13 @@ Our preliminary results justify further evaluation of the system.
 Based on our preliminary results, our primary focus will be to implement scaling-in and elastic load-balancing 
 to handle changes in both global and relative load. 
 Since our current implementation exhibits a routing time of $\mathcal O (\sqrt{n})$, 
-we propose maintaining connections to nodes that are not directly connected. 
+we propose 2D skip list routing and local routing shortlists. 
+
+A 2D skip list could represent node connections, in that each cache node would not only maintain connections to their direct neighbors, 
+but also to some of their second-degree and third-degree neighbors, and so on. 
+With local routing shortlist, each cache node tracks recent queries which entered the overlay via that node, 
+along with the cache foci of all the nodes the query visited. 
+Nodes could then improve the first routing decision of subsequent queries that enter.
 This should drop the routing time to $\mathcal O(log(n))$.
 
 \bibliography{lniguide}
