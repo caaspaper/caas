@@ -125,14 +125,14 @@ This cache overlay serves as the basis for further comparisons of various load-b
 to see whether linear scalability relative to resources can be achieved. 
 We confirmed that non-uniform workloads cause the system's performance and scalability to degrade under higher query rates. 
 We also showed that even with non-uniform workloads, 
-the system with scaling-out is able to scale almost linearly relative to resources. 
+the system with scaling-out is able to scale linearly.
 Our preliminary results justify further evaluation of the system.
 
 Based on our preliminary results, our primary focus will be to implement scaling-in and elastic load-balancing 
 to handle changes in both global and relative load. 
 Since our current implementation exhibits a routing time of $\mathcal O (\sqrt{n})$, 
 we propose that our nodes keep skiplist-like connections 
-to 2nd or 3rd neighbors in order to achieve $\mathcal O (\log n)$ routing, as well as local routing shortlists. 
+to 2nd or 3rd neighbors in order to achieve $\mathcal O (\log n)$ routing, as well keep as local routing shortlists. 
 With local routing shortlists, each cache node tracks recent queries which entered the overlay via that node, 
 along with the cache foci of all the nodes the query visited. 
 Nodes could then improve the first routing decision of subsequent queries that enter.
