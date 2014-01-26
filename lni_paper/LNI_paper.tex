@@ -12,7 +12,7 @@
 \maketitle
 
 \begin{abstract}
-Location-based services for mobile devices are a type of distributed system which utilize geographic behavior of its users. 
+Location-based services for mobile devices are a type of distributed system which utilizes geographic behavior of its users. 
 Balancing dynamic query workloads and skewed data remains a problem. 
 Scale-in and scale-out are two proposals that temporarily remove or add resources, respectively. 
 To characterize situations where scaling is more efficient, 
@@ -52,16 +52,22 @@ can increase throughput beyond what is already the system maximum.
 Thus extreme spikes in query workloads can exceed the system's maximum capabilities. 
 Adding and then removing additional resources to the LBS can address these temporary spikes. 
 The idea is that the overlay automatically decides when to add or remove nodes, based on self-measured load. 
-Adding nodes is referred to as \emph{scaling-in}, whereas removing nodes is referred to as \emph{scaling-out.}  
+Removing nodes is referred to as \emph{scaling-in}, whereas adding nodes is referred to as \emph{scaling-out.}  
 In the scope of our project, we investigate whether scaling-out mitigates dynamic peaks in a distributed spatial cache overlay. 
 
 Our system is based on \cite{MultiLevel:Lueb2}. 
 The data region is partitioned into a 2D grid. 
-Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data is within a specified distance to that node's cache focus.
+Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
 
 \section{Architecture and Methodology}
-Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster. Nodes receive external queries, which they can forward. An external GUI launches and shuts the system down. The system runs remotely on a cluster of unspecified size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
-The idea is that when a node's load exceeds a given threshold, the node communicates with its neighbors to confirm whether the overload can be relieved by adding a new node.
+Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster.  
+Nodes receive external queries, which they can forward. 
+An external GUI launches and shuts the system down. 
+The system runs remotely on a cluster of unspecified size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. 
+Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
+The idea is that when a node's load exceeds a given threshold, 
+the node communicates with its neighbors to confirm 
+whether the overload can be relieved by adding a new node.
 
 \begin{figure}[!ht]
   \begin{center}
