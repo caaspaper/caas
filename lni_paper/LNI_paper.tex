@@ -111,8 +111,8 @@ Each run lasted $10$ seconds, so the total number of queries sent to the grid du
      \end{center}
 	\end{figure}
 
-We hypothesized that with scaling-out, our system could approximate linear scalability, 
-relative to resources, in both the uniform and non-uniform cases. 
+We hypothesized that with scaling-out, our system could approximate linear scalability 
+in both the uniform and non-uniform cases. 
 Our results support our hypothesis. Under the higher request rate $k=20$, 
 latency increases markedly for the non-uniform (no scaling-out) group. 
 In contrast, the median times for the non-uniform(scaling-out) group when $n=16$ remain within 30 percent of the median latencies 
@@ -122,10 +122,10 @@ when $n=8$, although the total number of nodes has doubled and therefore the amo
 In our study, we designed, implemented and evaluated a distributed spatial cache overlay 
 that is flexible enough to allow implementations of more sophisticated load-balancing schemes. 
 This cache overlay serves as the basis for further comparisons of various load-balancing mechanisms 
-to see whether linear scalability relative to resources can be achieved. 
+to see whether linear scalability can be achieved. 
 We confirmed that non-uniform workloads cause the system's performance and scalability to degrade under higher query rates. 
 We also showed that even with non-uniform workloads, 
-the system with scaling-out is able to scale linearly.
+the system with scaling-out is able to scale almost linearly. 
 Our preliminary results justify further evaluation of the system.
 
 Based on our preliminary results, our primary focus will be to implement scaling-in and elastic load-balancing 
@@ -140,15 +140,6 @@ Nodes could then improve the first routing decision of subsequent queries that e
 
 \bibliography{lniguide}
 \begin{thebibliography}{1}
-%\bibitem{migration:mondal}
-%A.~Mondal, et al. 
-%``Effective Load-balancing via Migration and Replication in Spatial Grids."\\
-%\emph{Dexa, Vol. 2736}: Springer, 2003: pp.202-211. \\
-
-%\bibitem{p2p:godfrey}
-%B.~Godfrey, et al. 
-%``Load Balancing in Dynamic Structured P2P Systems."\\
-%\emph{23. INFOCOM}: IEEE Computer Society, 2004. \\
 
 \bibitem{grids:scholl}
 T.~Scholl, et al. 
@@ -160,13 +151,10 @@ C.~L\"{u}bbe, et al.
 ``Holistic load-balancing in a distributed spatial cache."\\
 \emph{MDM}: IEEE Computer Society, 2013: pp. 267-270.\\
 
-%\bibitem{disco:Luebbe}
-%C.~L\"{u}bbe, et al. 
-%``DiSCO: A Distributed Semantic Cache Overlay for Location-Based Services."\\
-%\emph{MDM}: IEEE Computer Society, 2011: pp. 1-10.\\
 \bibitem{client:wee}
 S.~Wee and H.~Liu. 
 ``Client-side load balancer using cloud."\\ 
-\emph{SAC}: IEEE Computer Society, 2010, pp. 399-405.\\
+\emph{SAC}: IEEE Computer Society, 2010, pp. 399-405.
+
 \end{thebibliography}
 \end{document}
