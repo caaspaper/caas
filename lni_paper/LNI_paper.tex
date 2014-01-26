@@ -71,7 +71,7 @@ whether the overload can be relieved by adding a new node.
 
 \begin{figure}[!ht]
   \begin{center}
-    \includegraphics[width=\textwidth]{arch2-cropped}
+    \includegraphics[width=.6\textwidth]{arch2-cropped}
     \caption{\label{arch}System Architecture of Cache as a Service}
   \end{center}
 \end{figure}
@@ -94,13 +94,20 @@ and a given number of nodes ($n = 8, 12, 16$).
 Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \cdot 10 \cdot k$. 
 
 \section{Results and Discussion}
-	For a given grid size $n$ and query rate $k$, Figure \ref{results} shows the median latencies in milliseconds of all queries, 
+	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15}, \ref{resultsk20} show the median latencies in milliseconds of all queries, 
 	according to experimental group. The values for the uniform distribution/without scaling-out group are not shown, but were, as expected, worse than uniform/scaling-out but better than hotspot/scaling-out and hotspot/without scaling-out. 
 
   \begin{figure}[htb]
     \begin{center}
-      \includegraphics[width=\textwidth]{results3d}
-       \caption{\label{results} Median Request Latencies}
+      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.8\textwidth]{3d_k15}
+       \caption{\label{resultsk15} Median Request Latency in $ms$, k=15}
+     \end{center}
+	\end{figure}
+	
+	 \begin{figure}[htb]
+    \begin{center}
+      \includegraphics[trim = 2.0cm 0.5cm 2.0cm 1.0cm, clip=true,  width=.8\textwidth]{3d_k20}
+       \caption{\label{resultsk20} Median Request Latency $ms$, k=20}
      \end{center}
 	\end{figure}
 
@@ -125,18 +132,15 @@ Based on our preliminary results, our primary focus will be to implement scaling
 to handle changes in both global and relative load. 
 Since our current implementation exhibits a routing time of $\mathcal O (\sqrt{n})$, 
 we propose 2D skip list routing and local routing shortlists. 
-
 A 2D skip list could represent node connections, in that each cache node would not only maintain connections to their direct neighbors, 
 but also to some of their second-degree and third-degree neighbors, and so on. 
-With local routing shortlist, each cache node tracks recent queries which entered the overlay via that node, 
+With local routing shortlists, each cache node tracks recent queries which entered the overlay via that node, 
 along with the cache foci of all the nodes the query visited. 
 Nodes could then improve the first routing decision of subsequent queries that enter.
 This should drop the routing time to $\mathcal O(log(n))$.
 
 \bibliography{lniguide}
-
 \begin{thebibliography}{1}
-
 %\bibitem{migration:mondal}
 %A.~Mondal, et al. 
 %``Effective Load-balancing via Migration and Replication in Spatial Grids."\\
@@ -161,16 +165,9 @@ C.~L\"{u}bbe, et al.
 %C.~L\"{u}bbe, et al. 
 %``DiSCO: A Distributed Semantic Cache Overlay for Location-Based Services."\\
 %\emph{MDM}: IEEE Computer Society, 2011: pp. 1-10.\\
-
 \bibitem{client:wee}
 S.~Wee and H.~Liu. 
 ``Client-side load balancer using cloud."\\ 
 \emph{SAC}: IEEE Computer Society, 2010, pp. 399-405.\\
-
 \end{thebibliography}
-
-
-
-
 \end{document}
-
