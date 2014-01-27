@@ -29,23 +29,27 @@ A typical example is a route-planning application for smartphones.
 The user sends an address as a query, and in response to the query, the application delivers data, such as the corresponding portion of the map. 
 A fundamental problem of LBS is how to allocate workload in the system, 
 so as to guarantee low latency and efficiency in processing these queries. 
-Much research has focused on load-balancing mechanisms for distributed systems with spatial data.
 
-However in an LBS, both query workloads and data have spatial and temporal aspects, 
+In an LBS, both query workloads and data have spatial and temporal aspects, 
 which dynamically change and thus require special considerations. 
 Query loads can vary depending on time or geographic density of users. 
 For example, fewer queries are sent late at night or in rural areas. 
-Sometimes many queries access data from one location, for instance when large crowds gather for an event. 
+Sometimes many queries request data from one location, for instance when large crowds gather for an event. 
 Moreover, the distribution of data can be skewed, i.e. non-uniformly clustered around certain spatial regions, like big cities. 
 
 Given these spatial and temporal characteristics, 
-we are interested in how to minimize decreases in system performance under such loads or data distribution. 
+we are interested in minimizing decreases in system performance under such loads or data distribution. 
+Much research has focused on load-balancing mechanisms for distributed systems with spatial data.
 A common technique is to partition data and then build a network overlay, which dedicates nodes to handle requests for certain partitions 
 \cite{client:wee}.
 Other approaches estimate query loads or calculate weights to place more nodes around expected hotspots \cite{grids:scholl}. 
 Yet it is difficult to predict or respond to changes, such as moving hotspots. 
 A more effective approach dedicates nodes in the overlay to cache frequently accessed data; 
 this network is referred to as a \emph{distributed spatial cache overlay}. 
+
+Our system is based on \cite{MultiLevel:Lueb2}. 
+The data region is partitioned into a 2D grid. 
+Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
 
 However, none of the previously mentioned load-balancing approaches in distributed spatial overlays 
 can increase throughput beyond what is already the system maximum. 
@@ -55,15 +59,11 @@ The idea is that the overlay automatically decides when to add or remove nodes, 
 Removing nodes is referred to as \emph{scaling-in}, whereas adding nodes is referred to as \emph{scaling-out.}  
 In the scope of our project, we investigate whether scaling-out mitigates dynamic peaks in a distributed spatial cache overlay. 
 
-Our system is based on \cite{MultiLevel:Lueb2}. 
-The data region is partitioned into a 2D grid. 
-Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
-
 \section{Architecture and Methodology}
 Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster.  
 Nodes receive external queries, which they can forward. 
 An external GUI launches and shuts the system down. 
-The system runs remotely on a cluster of unspecified size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. 
+The system runs remotely on a cluster of variable size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. 
 Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
 The idea is that when a node's load exceeds a given threshold, 
 the node communicates with its neighbors to confirm 
@@ -72,41 +72,43 @@ whether the overload can be relieved by adding a new node.
 \begin{figure}[!ht]
   \begin{center}
     \includegraphics[width=.789\textwidth]{arch2-cropped}
-    \caption{\label{arch}System Architecture of Cache as a Service}
+    \caption{\label{arch}System Architecture}
   \end{center}
 \end{figure}
 
 The goal of our experiment was to quantify latency under uniform and non-uniform query loads.
-In the uniform case, the target coordinates are distributed uniformly.
+In the uniform case, the target coordinates of the queries are distributed uniformly.
 However in the non-uniform case, we can simulate the formation of hotspots: 
 the target coordinate is obtained by sampling a Gaussian distribution 
-with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. We measured request latency of the cache overlay under four experimental groups, depending on the type of distribution and presence of scaling-out: 
+with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. We measured request latency of the cache overlay under three experimental groups, depending on the type of distribution and presence of scaling-out: 
 (1) uniform plus scaling-out, 
-(2) uniform distribution, 
-(3) non-uniform plus scaling-out , 
-(4) non-uniform. 
+(2) hotspot plus scaling-out , 
+(3) hotspot without scaling-out. 
 
 The distributed spatial cache overlay was launched on a cluster of up to 32 (virtual) machines. 
 Our benchmarking program sent each cache node $k$ queries per second. 
 This query rate corresponds to about $1000/k$ milliseconds between two successive queries. 
 For every experimental group, we ran the benchmark program with query rates of $k = 15$ and $k=20$ 
 and a given number of nodes ($n = 8, 12, 16$). 
+During our tests with scaling, we added up to 16 new cache nodes.
 Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \cdot 10 \cdot k$. 
 
 \section{Results and Discussion}
 	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15}, \ref{resultsk20} show the median latencies in milliseconds of all queries, 
-	according to experimental group. The values for the uniform distribution/without scaling-out group are not shown, but were, as expected, worse than uniform/scaling-out but better than hotspot/scaling-out and hotspot/without scaling-out. 
+	according to experimental group.
+\footnote{We briefly examined the effect of uniform distributions without scaling-out. 
+The latency was, as expected, worse than uniform with scaling, but better than our hotspot tests.}
 
   \begin{figure}[htb]
     \begin{center}
-		\includegraphics[width=.615\textwidth]{results15}
+		\includegraphics[width=.57\textwidth]{results15}
        \caption{\label{resultsk15} Median Request Latency in $ms$, k=15}
      \end{center}
 	\end{figure}
 
 	 \begin{figure}[htb]
     \begin{center}
-			\includegraphics[width=.615\textwidth]{results20}
+			\includegraphics[width=.57\textwidth]{results20}
        \caption{\label{resultsk20} Median Request Latency $ms$, k=20}
      \end{center}
 	\end{figure}
@@ -115,28 +117,25 @@ We hypothesized that with scaling-out, our system could approximate linear scala
 in both the uniform and non-uniform cases. 
 Our results support our hypothesis. Under the higher request rate $k=20$, 
 latency increases markedly for the non-uniform (no scaling-out) group. 
-In contrast, the median times for the non-uniform(scaling-out) group when $n=16$ remain within 30 percent of the median latencies 
+In contrast, the median times for the non-uniform (scaling-out) group when $n=16$ remain within 30 percent of the median latencies 
 when $n=8$, although the total number of nodes has doubled and therefore the amount of queries being routed to the hotspot has also doubled.
 			
 \section{Conclusion and Future Work}
 In our study, we designed, implemented and evaluated a distributed spatial cache overlay 
-that is flexible enough to allow implementations of more sophisticated load-balancing schemes. 
+that is flexible enough to allow implementations of sophisticated load-balancing schemes. 
 This cache overlay serves as the basis for further comparisons of various load-balancing mechanisms 
 to see whether linear scalability can be achieved. 
 We confirmed that non-uniform workloads cause the system's performance and scalability to degrade under higher query rates. 
-We also showed that even with non-uniform workloads, 
-the system with scaling-out is able to scale almost linearly. 
-Our preliminary results justify further evaluation of the system.
+Using our scaling-out mechanism, we were able to scale the system's performance almoast lineraly.
 
-Based on our preliminary results, our primary focus will be to implement scaling-in and elastic load-balancing 
+Based on our current results, our primary focus will be to implement scaling-in load-balancing 
 to handle changes in both global and relative load. 
 Since our current implementation exhibits a routing time of $\mathcal O (\sqrt{n})$, 
 we propose that our nodes keep skiplist-like connections 
-to 2nd or 3rd neighbors in order to achieve $\mathcal O (\log n)$ routing, as well keep as local routing shortlists. 
-With local routing shortlists, each cache node tracks recent queries which entered the overlay via that node, 
+to 2nd or 3rd neighbors as well as local routing shortlists, in order to achieve $\mathcal O (\log n)$ routing.
+With local routing shortlists, cache nodes track recent queries which entered the overlay through them, 
 along with the cache foci of all the nodes the query visited. 
 Nodes could then improve the first routing decision of subsequent queries that enter.
-
 
 \bibliography{lniguide}
 \begin{thebibliography}{1}
