@@ -40,16 +40,11 @@ Moreover, the distribution of data can be skewed, i.e. non-uniformly clustered a
 Given these spatial and temporal characteristics, 
 we are interested in minimizing decreases in system performance under such loads or data distribution. 
 Much research has focused on load-balancing mechanisms for distributed systems with spatial data.
-A common technique is to partition data and then build a network overlay, which dedicates nodes to handle requests for certain partitions 
-\cite{client:wee}.
-Other approaches estimate query loads or calculate weights to place more nodes around expected hotspots \cite{grids:scholl}. 
+A common technique is to partition data and then build a network overlay, which dedicates nodes to handle requests for certain partitions \cite{client:wee}.
+Other approaches estimate query loads or calculate weights to place more nodes around expected hotspots \cite{grids:scholl}.
 Yet it is difficult to predict or respond to changes, such as moving hotspots. 
 A more effective approach dedicates nodes in the overlay to cache frequently accessed data; 
-this network is referred to as a \emph{distributed spatial cache overlay}. 
-
-Our system is based on \cite{MultiLevel:Lueb2}. 
-The data region is partitioned into a 2D grid. 
-Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. Our grid of cache nodes forms a Delauney triangulation in a 2D metric space. A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
+this network is referred to as a \emph{distributed spatial cache overlay} \cite{MultiLevel:Lueb2}. 
 
 However, none of the previously mentioned load-balancing approaches in distributed spatial overlays 
 can increase throughput beyond what is already the system maximum. 
@@ -60,6 +55,15 @@ Removing nodes is referred to as \emph{scaling-in}, whereas adding nodes is refe
 In the scope of our project, we investigate whether scaling-out mitigates dynamic peaks in a distributed spatial cache overlay. 
 
 \section{Architecture and Methodology}
+
+Our system is inspired by the concepts presented in \cite{MultiLevel:Lueb2}. 
+The data region is partitioned into a 2D grid. 
+Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. 
+Our grid of cache nodes forms a Delaunay triangulation in a 2D metric space. 
+A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. 
+Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
+Based on these general principles, we implemented a scaling-out mechanism for the distributed spatial cache overlay in a cluster environment.
+
 Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster.  
 Nodes receive external queries, which they can forward. 
 An external GUI launches and shuts the system down. 
@@ -80,35 +84,37 @@ The goal of our experiment was to quantify latency under uniform and non-uniform
 In the uniform case, the target coordinates of the queries are distributed uniformly.
 However in the non-uniform case, we can simulate the formation of hotspots: 
 the target coordinate is obtained by sampling a Gaussian distribution 
-with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. We measured request latency of the cache overlay under three experimental groups, depending on the type of distribution and presence of scaling-out: 
+with a standard deviation of 0.18 times the area of the data region that is centered around a point in the grid. 
+We measured request latency of the cache overlay under three experimental groups
+\footnote{We briefly examined the effect of uniform distributions without scaling-out. 
+The latency was, as expected, worse than uniform with scaling, but better than our hotspot tests.}
+, depending on the type of distribution and presence of scaling-out: 
 (1) uniform plus scaling-out, 
 (2) hotspot plus scaling-out , 
-(3) hotspot without scaling-out. 
+(3) hotspot.
 
 The distributed spatial cache overlay was launched on a cluster of up to 32 (virtual) machines. 
 Our benchmarking program sent each cache node $k$ queries per second. 
 This query rate corresponds to about $1000/k$ milliseconds between two successive queries. 
 For every experimental group, we ran the benchmark program with query rates of $k = 15$ and $k=20$ 
-and a given number of nodes ($n = 8, 12, 16$). 
-During our tests with scaling, we added up to 16 new cache nodes.
+and a given number of nodes ($n = 8, 12, 16$).
+\footnote{The remaining (virtual) machines are used during scaling.}
 Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \cdot 10 \cdot k$. 
 
 \section{Results and Discussion}
 	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15}, \ref{resultsk20} show the median latencies in milliseconds of all queries, 
 	according to experimental group.
-\footnote{We briefly examined the effect of uniform distributions without scaling-out. 
-The latency was, as expected, worse than uniform with scaling, but better than our hotspot tests.}
 
   \begin{figure}[htb]
     \begin{center}
-		\includegraphics[width=.57\textwidth]{results15}
+		\includegraphics[width=.61\textwidth]{results15}
        \caption{\label{resultsk15} Median Request Latency in $ms$, k=15}
      \end{center}
 	\end{figure}
 
 	 \begin{figure}[htb]
     \begin{center}
-			\includegraphics[width=.57\textwidth]{results20}
+			\includegraphics[width=.61\textwidth]{results20}
        \caption{\label{resultsk20} Median Request Latency $ms$, k=20}
      \end{center}
 	\end{figure}
@@ -116,9 +122,9 @@ The latency was, as expected, worse than uniform with scaling, but better than o
 We hypothesized that with scaling-out, our system could approximate linear scalability 
 in both the uniform and non-uniform cases. 
 Our results support our hypothesis. Under the higher request rate $k=20$, 
-latency increases markedly for the non-uniform (no scaling-out) group. 
-In contrast, the median times for the non-uniform (scaling-out) group when $n=16$ remain within 30 percent of the median latencies 
-when $n=8$, although the total number of nodes has doubled and therefore the amount of queries being routed to the hotspot has also doubled.
+latency increases markedly for the hotspot group. 
+In contrast, the median times for the hotspot (with scaling-out) group when $n=16$ remain within 30 \% of the median latencies 
+when $n=8$, although the total number of nodes and therefore the amount of queries being routed to the hotspot has doubled.
 			
 \section{Conclusion and Future Work}
 In our study, we designed, implemented and evaluated a distributed spatial cache overlay 
@@ -126,7 +132,7 @@ that is flexible enough to allow implementations of sophisticated load-balancing
 This cache overlay serves as the basis for further comparisons of various load-balancing mechanisms 
 to see whether linear scalability can be achieved. 
 We confirmed that non-uniform workloads cause the system's performance and scalability to degrade under higher query rates. 
-Using our scaling-out mechanism, we were able to scale the system's performance almoast lineraly.
+Using our scaling-out mechanism, we were able to scale the system's performance almost linearly.
 
 Based on our current results, our primary focus will be to implement scaling-in load-balancing 
 to handle changes in both global and relative load. 
