@@ -1,5 +1,5 @@
 \documentclass[english]{lni}
-
+\let\ifpdf\relax
 \IfFileExists{latin1.sty}{\usepackage{latin1}}{\usepackage{isolatin1}}
 
 \usepackage{graphicx}
@@ -12,7 +12,7 @@
 \maketitle
 
 \begin{abstract}
-Location-based services for mobile devices are a type of distributed system which utilizes geographic behavior of its users. 
+Location-based services for mobile devices are a type of distributed system that utilizes geographic behavior of its users. 
 Balancing dynamic query workloads and skewed data remains a problem. 
 Scale-in and scale-out are two proposals that temporarily remove or add resources, respectively. 
 To characterize situations where scaling is more efficient, 
@@ -26,7 +26,7 @@ Our results indicate that the system achieves almost linear relative scalability
 Location-based services (LBS) are data-intensive applications which use the geographic behavior of the user in order to process queries. 
 These queries access spatial data, which correspond to physical geographic regions. 
 A typical example is a route-planning application for smartphones. 
-The user sends an address as a query, and in response to the query, the application delivers data, such as the corresponding portion of the map. 
+The user sends an address as a query and in response to the query the application delivers data such as the corresponding portion of the map. 
 A fundamental problem of LBS is how to allocate workload in the system, 
 so as to guarantee low latency and efficiency in processing these queries. 
 
@@ -35,7 +35,7 @@ which dynamically change and thus require special considerations.
 Query loads can vary depending on time or geographic density of users. 
 For example, fewer queries are sent late at night or in rural areas. 
 Sometimes many queries request data from one location, for instance when large crowds gather for an event. 
-Moreover, the distribution of data can be skewed, i.e. non-uniformly clustered around certain spatial regions, like big cities. 
+Moreover, the distribution of data can be skewed, i.e. non-uniformly clustered around certain spatial regions, such as big cities. 
 
 Given these spatial and temporal characteristics, 
 we are interested in minimizing decreases in system performance under such loads or data distribution. 
@@ -48,7 +48,7 @@ this network is referred to as a \emph{distributed spatial cache overlay} \cite{
 
 However, none of the previously mentioned load-balancing approaches in distributed spatial overlays 
 can increase throughput beyond what is already the system maximum. 
-Thus extreme spikes in query workloads can exceed the system's maximum capabilities. 
+Thus, extreme spikes in query workloads can exceed the system's maximum capabilities. 
 Adding and then removing additional resources to the LBS can address these temporary spikes. 
 The idea is that the overlay automatically decides when to add or remove nodes, based on self-measured load. 
 Removing nodes is referred to as \emph{scaling-in}, whereas adding nodes is referred to as \emph{scaling-out.}  
@@ -60,13 +60,13 @@ Our system is inspired by the concepts presented in \cite{MultiLevel:Lueb2}.
 The data region is partitioned into a 2D grid. 
 Then a distributed cache overlay is built on top which consists of nodes dedicated to caching data from certain grid partitions. 
 Our grid of cache nodes forms a Delaunay triangulation in a 2D metric space. 
-A cache node's coordinate is known as it's \emph{cache focus}, which is important when load-balancing or caching data. 
+A cache node's coordinate is known as its \emph{cache focus}, which is important when load-balancing or caching data. 
 Greedy routing is used to forward queries to a target node; the desired data are within a specified distance to that node's cache focus.
 Based on these general principles, we implemented a scaling-out mechanism for the distributed spatial cache overlay in a cluster environment.
 
-Our system architecture, as seen in Figure \ref{arch}, consists of grid of cache nodes that are organized spatially and deployed on a cluster.  
+Our system architecture, as shown in Figure \ref{arch}, consists of a grid of cache nodes that are organized spatially and deployed on a cluster.  
 Nodes receive external queries, which they can forward. 
-An external GUI launches and shuts the system down. 
+An external GUI can be used to launch and shut the system down.
 The system runs remotely on a cluster of variable size and can test the grid under different load-balancing and scaling mechanisms. Furthermore, we included an administrative node to initialize overlay construction and a basic logging system. 
 Our implementation of scaling-out relies on asynchronous message-passing and handshake confirmation between nodes. 
 The idea is that when a node's load exceeds a given threshold, 
@@ -99,11 +99,11 @@ This query rate corresponds to about $1000/k$ milliseconds between two successiv
 For every experimental group, we ran the benchmark program with query rates of $k = 15$ and $k=20$ 
 and a given number of nodes ($n = 8, 12, 16$).
 \footnote{The remaining (virtual) machines are used during scaling.}
-Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \cdot 10 \cdot k$. 
+Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \times 10 \times k$. 
 
 \section{Results and Discussion}
-	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15}, \ref{resultsk20} show the median latencies in milliseconds of all queries, 
-	according to experimental group.
+	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15} and \ref{resultsk20} show the median latencies in milliseconds of all queries, 
+	according to our experimental groups.
 
   \begin{figure}[htb]
     \begin{center}
@@ -123,7 +123,7 @@ We hypothesized that with scaling-out, our system could approximate linear scala
 in both the uniform and non-uniform cases. 
 Our results support our hypothesis. Under the higher request rate $k=20$, 
 latency increases markedly for the hotspot group. 
-In contrast, the median times for the hotspot (with scaling-out) group when $n=16$ remain within 30 \% of the median latencies 
+In contrast, the median times for the hotspot (with scaling-out) group when $n=16$ remain within 30\% of the median latencies 
 when $n=8$, although the total number of nodes and therefore the amount of queries being routed to the hotspot has doubled.
 			
 \section{Conclusion and Future Work}
