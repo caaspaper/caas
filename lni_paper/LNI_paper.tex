@@ -26,7 +26,7 @@ Our results indicate that the system achieves almost linear relative scalability
 Location-based services (LBS) are data-intensive applications which use the geographic behavior of the user in order to process queries. 
 These queries access spatial data, which correspond to physical geographic regions. 
 A typical example is a route-planning application for smartphones. 
-The user sends an address as a query and in response to the query the application delivers data such as the corresponding portion of the map. 
+The user sends an address as a query, and in response to the query, the application delivers data, such as the corresponding portion of the map. 
 A fundamental problem of LBS is how to allocate workload in the system, 
 so as to guarantee low latency and efficiency in processing these queries. 
 
@@ -96,10 +96,10 @@ The latency was, as expected, worse than uniform with scaling, but better than o
 The distributed spatial cache overlay was launched on a cluster of up to 32 (virtual) machines. 
 Our benchmarking program sent each cache node $k$ queries per second. 
 This query rate corresponds to about $1000/k$ milliseconds between two successive queries. 
-For every experimental group, we ran the benchmark program with query rates of $k = 15$ and $k=20$ 
+For every experimental group, we ran the benchmark program with query rates of $k = 15\ \mathrm{s}^{-1}$ and $k=20\ \mathrm{s}^{-1}$ 
 and a given number of nodes ($n = 8, 12, 16$).
 \footnote{The remaining (virtual) machines are used during scaling.}
-Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $n \times 10 \times k$. 
+Each run lasted $10$ seconds, so the total number of queries sent to the grid during each run was $10 \times n \times k$. 
 
 \section{Results and Discussion}
 	For a given grid size $n$ and query rate $k$, Figures \ref{resultsk15} and \ref{resultsk20} show the median latencies in milliseconds of all queries, 
@@ -143,23 +143,22 @@ With local routing shortlists, cache nodes track recent queries which entered th
 along with the cache foci of all the nodes the query visited. 
 Nodes could then improve the first routing decision of subsequent queries that enter.
 
-\bibliography{lniguide}
 \begin{thebibliography}{1}
 
 \bibitem{grids:scholl}
 T.~Scholl, et al. 
 ``Workload-Aware Data Partitioning in Community-Driven Data Grids."\\
-\emph{EDBT}: ACM, 2009.
+Extending DataBase Technology (\emph{EDBT}): ACM, 2009.
 
 \bibitem{MultiLevel:Lueb2}
 C.~L\"{u}bbe, et al. 
 ``Holistic load-balancing in a distributed spatial cache."\\
-\emph{MDM}: IEEE Computer Society, 2013: pp. 267-270.
+Mobile Data Management (\emph{MDM}): IEEE Computer Society, 2013: pp. 267-270.
 
 \bibitem{client:wee}
 S.~Wee and H.~Liu. 
 ``Client-side load balancer using cloud."\\ 
-\emph{SAC}: IEEE Computer Society, 2010, pp. 399-405.
+Symposium on Applied Computing (\emph{SAC}): IEEE Computer Society, 2010, pp. 399-405.
 
 \end{thebibliography}
 \end{document}
